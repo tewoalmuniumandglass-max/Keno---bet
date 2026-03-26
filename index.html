@@ -80,8 +80,12 @@
                 if (user.password === ps) { loginSuccess(user); }
                 else { msg.innerText = "የተሳሳተ ሚስጥር ቁጥር!"; }
             } else {
-                const { data: newUser, error: insError } = await supabase.from('users').insert([{ phone: ph, password: ps, balance: 100 }]).select().single();
-                if (insError) throw insError;
+                const { data: newUser, error: insError } = await supabase
+  .from('users')
+  .insert([{ phone: ph, password: ps, balance: 100 }]) // እዚህ ጋር [] እና balance የሚለው መስተካከል አለበት
+  .select()
+  .single();
+  if (insError) throw insError;
                 loginSuccess(newUser);
             }
         } catch (e) {
