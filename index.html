@@ -49,8 +49,8 @@
 </div>
 
 <script>
-    const S_URL = 'https://nvfavqzltcmzbvhvauxc.supabase.co';
-    const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12Zm92cXp0b216YnZodmF1eGMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczOTYyOTgxMiwiZXhwIjoyMDU1MjA1ODEyfQ.sb_publishable_12xn0x6_jG9f6vY_GjL-6vL-6vL-6vL-6vL-6vL';
+    const S_URL ='https://nvfavqzltcmzbvhvauxc.supabase.co';
+    const S_KEY = 'process.env.SUPABASE_KEY';
     const supabase = window.supabase.createClient(S_URL, S_KEY);
 
     let selected = [], timeLeft = 60;
