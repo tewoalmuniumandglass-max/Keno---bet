@@ -26,12 +26,12 @@
         .ball { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; background: var(--accent); color: #000; animation: bounce 0.4s ease; }
         @keyframes bounce { 0% { transform: scale(0); } 100% { transform: scale(1); } }
 
-        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; padding: 15px; }
-        .cell { background: var(--card); height: 38px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; border: 1px solid #222; }
-        .cell.selected { background: var(--blue); border-color: white; }
-        .cell.hit { background: var(--green) !important; transform: scale(1.1); }
+        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; padding: 15px; margin-bottom: 20px; }
+        .cell { background: var(--card); height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; border: 1px solid #222; }
+        .cell.selected { background: var(--blue); border-color: white; box-shadow: 0 0 8px var(--blue); }
+        .cell.hit { background: var(--green) !important; transform: scale(1.1); color: white; }
 
-        .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 15px; border-radius: 20px 20px 0 0; box-sizing: border-box; border-top: 1px solid #333; }
+        .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 15px; border-radius: 20px 20px 0 0; box-sizing: border-box; border-top: 1px solid #333; z-index: 100; }
         .bet-btn { width: 100%; background: var(--green); border: none; color: white; font-weight: bold; font-size: 22px; border-radius: 12px; height: 55px; cursor: pointer; }
 
         #ticket-list { padding: 10px; margin-bottom: 180px; max-height: 150px; overflow-y: auto; }
@@ -78,56 +78,145 @@
 </div>
 
 <script>
+    // ሳም፣ ያንተ መረጃዎች እዚህ ጋር ገብተዋል
     const SUPABASE_URL = 'https://mvfovqztomzbvhvauxc.supabase.co'; 
-    const SUPABASE_KEY = 'sb_publishable_12xn0x6_jG9f6vY_GjL-6vL-6vL-6vL-6vL-6vL'; // ያንተን ቁልፍ እዚህ ማረጋገጥህን እንዳትረሳ
+    const SUPABASE_KEY = 'sb_publishable_12xn0x6_jG9f6vY_GjL-6vL-6vL-6vL-6vL-6vL'; 
     
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let user = null, selected = [], activeTickets = [], timeLeft = 60, isDrawing = false;
 
-    // ... (Login function እንዳለ ይሁን) ...
+    async function handleLogin() {
+        const phone = document.getElementById('reg-phone').value;
+        const pass = document.getElementById('reg-pass').value;
+        const msg = document.getElementById('auth-msg');
+        if(!phone || !pass) return;
+
+        try {
+            let { data: dbUser } = await supabaseClient.from('users').select('*').eq('phone', phone).single();
+            if (dbUser) {
+                if (dbUser.password === pass) { user = dbUser; enterGame(); }
+                else msg.innerText = "ስህተት!";
+            } else {
+                const { data: newUser } = await supabaseClient.from('users').insert([{ phone, password: pass, balance: 100 }]).select().single();
+                user = newUser; enterGame();
+            }
+        } catch (e) { msg.innerText = "ስህተት! Check Key/RLS"; }
+    }
 
     function enterGame() {
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('game-screen').classList.remove('hidden');
         document.getElementById('u-display-phone').innerText = user.phone;
         updateBalanceUI();
-        
-        // Grid እንዲመጣ ትዕዛዙን እዚህ ጋር እናረጋግጥ
-        initGrid(); 
-        
-        // ሰዓቱን ያስጀምራል
-        if(!window.tickInterval) {
-            window.tickInterval = setInterval(tick, 1000);
-        }
+        initGrid(); // ቁጥሮቹ እንዲመጡ ያደርጋል
+        setInterval(tick, 1000);
         createClouds();
+    }
+
+    function createClouds() {
+        const scene = document.querySelector('.aviator-scene');
+        setInterval(() => {
+            const cloud = document.createElement('div');
+            cloud.className = 'cloud';
+            cloud.style.width = Math.random() * 40 + 20 + 'px';
+            cloud.style.height = '10px';
+            cloud.style.top = Math.random() * 100 + 'px';
+            scene.appendChild(cloud);
+            setTimeout(() => cloud.remove(), 4000);
+        }, 800);
     }
 
     function initGrid() {
         const grid = document.getElementById('main-grid');
-        grid.innerHTML = ""; // መጀመሪያ ባዶ ያደርገዋል
+        grid.innerHTML = ""; // መጀመሪያ ባዶ መሆኑን ያረጋግጣል
         for(let i=1; i<=80; i++) {
             const c = document.createElement('div');
-            c.className = 'cell'; 
-            c.id = 'cell-' + i; 
-            c.innerText = i;
+            c.className = 'cell'; c.id = 'cell-' + i; c.innerText = i;
             c.onclick = () => {
                 if(isDrawing) return;
-                if(c.classList.contains('selected')) { 
-                    c.classList.remove('selected'); 
-                    selected = selected.filter(n => n !== i); 
-                } else if(selected.length < 10) { 
-                    c.classList.add('selected'); 
-                    selected.push(i); 
-                }
+                if(c.classList.contains('selected')) { c.classList.remove('selected'); selected = selected.filter(n => n !== i); }
+                else if(selected.length < 10) { c.classList.add('selected'); selected.push(i); }
             };
             grid.appendChild(c);
         }
-        console.log("Grid Created!"); // ለሙከራ
     }
 
-    // ... (ሌላው የ Draw እና የአቪዬተር ኮድ ይቀጥላል) ...
-</script>
+    async function buyTicket() {
+        if(!selected.length || user.balance < 5 || isDrawing) return;
+        const { error } = await supabaseClient.from('users').update({ balance: user.balance - 5 }).eq('phone', user.phone);
+        if(!error) {
+            await supabaseClient.from('tickets').insert([{ user_phone: user.phone, selected_numbers: selected, stake_amount: 5 }]);
+            user.balance -= 5; updateBalanceUI();
+            activeTickets.push({ nums: [...selected], amt: 5, won: 0 });
+            renderTickets(); clearGrid();
+        }
+    }
 
+    function tick() {
+        if(isDrawing) return;
+        timeLeft--; 
+        if(timeLeft <= 0) runDraw();
+        document.getElementById('timer-display').innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
+    }
+
+    function runDraw() {
+        isDrawing = true;
+        let drawn = [], count = 0;
+        const plane = document.getElementById('airplane');
+        plane.style.left = '10%'; plane.style.bottom = '40px';
+
+        const itv = setInterval(() => {
+            let n = Math.floor(Math.random()*80)+1;
+            while(drawn.includes(n)) n = Math.floor(Math.random()*80)+1;
+            drawn.push(n);
+            
+            plane.style.left = (15 + (count * 4)) + '%';
+            plane.style.bottom = (40 + Math.sin(count) * 20) + 'px';
+
+            const ball = document.createElement('div'); ball.className = 'ball'; ball.innerText = n;
+            document.getElementById('top-display').appendChild(ball);
+            const cell = document.getElementById('cell-' + n);
+            if(cell) cell.classList.add('hit');
+            
+            count++;
+            if(count >= 20) { 
+                clearInterval(itv); 
+                plane.style.left = '110%';
+                calculateFinal(drawn); 
+            }
+        }, 500);
+    }
+
+    async function calculateFinal(drawn) {
+        let totalWin = 0;
+        activeTickets.forEach(t => {
+            const hits = t.nums.filter(n => drawn.includes(n)).length;
+            if(hits >= 3) { t.won = t.amt * (hits - 1); totalWin += t.won; }
+        });
+        if(totalWin > 0) {
+            user.balance += totalWin;
+            await supabaseClient.from('users').update({ balance: user.balance }).eq('phone', user.phone);
+            updateBalanceUI();
+        }
+        renderTickets(drawn);
+        setTimeout(() => {
+            activeTickets = []; timeLeft = 60; isDrawing = false;
+            document.getElementById('top-display').innerHTML = "";
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('hit'));
+            document.getElementById('airplane').style.left = '-60px';
+            renderTickets();
+        }, 5000);
+    }
+
+    function renderTickets(drawn = []) {
+        document.getElementById('ticket-list').innerHTML = activeTickets.map(t => {
+            const hits = t.nums.filter(n => drawn.includes(n)).length;
+            return `<div class="ticket-card">ቁጥሮች: ${t.nums.join(', ')} | Hits: ${hits} ${t.won > 0 ? ' | <b>WIN: '+t.won+'</b>' : ''}</div>`;
+        }).join('');
+    }
+    function updateBalanceUI() { document.getElementById('u-balance').innerText = user.balance.toFixed(2) + " ETB"; }
+    function clearGrid() { selected = []; document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected')); }
+</script>
 </body>
 </html>
