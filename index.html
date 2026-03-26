@@ -3,125 +3,232 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keno Bet</title>
+    <title>Gashabet Premium Keno</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #06090f; --card: #111621; --accent: #ffd700; --blue: #007bff; --green: #2ecc71; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; }
+        /* ያንተ ስታይል እዚህ ይቀጥላል... (ላሳጥረው ብዬ ነው) */
+        :root { --bg: #0f1215; --header: #0b4a8f; --grid: #2c313c; --green: #28a745; --gold: #ffd700; --blue: #007bff; --red: #dc3545; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; user-select: none; overflow-x: hidden; }
+        header { background: var(--header); padding: 10px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
+        .top-display-area { background: #000; padding: 10px; min-height: 70px; display: flex; flex-wrap: wrap; gap: 5px; justify-content: center; align-content: center; border-bottom: 2px solid #333; }
+        .ball { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; }
+        .ball.selected-ball { background: var(--blue); color: white; border: 1px solid #fff; }
+        .ball.drawn-ball { background: var(--gold); color: #000; }
+        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 3px; padding: 10px; }
+        .cell { background: var(--grid); height: 35px; display: flex; align-items: center; justify-content: center; font-size: 14px; font-weight: bold; cursor: pointer; border-radius: 4px; }
+        .cell.selected { background: var(--blue); color: white; }
+        .cell.miss { background: #fff; color: #000; }
+        #login-screen { position: fixed; inset: 0; background: var(--bg); z-index: 10000; display: flex; flex-direction: column; align-items: center; justify-content: center; }
         .hidden { display: none !important; }
-        .auth-container { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
-        .auth-card { background: var(--card); padding: 30px; border-radius: 20px; width: 320px; text-align: center; border: 1px solid var(--accent); }
-        input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
-        .btn-gold { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #000; }
-        header { background: #0b4a8f; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
-        .balance-box { background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; color: var(--accent); font-weight: bold; border: 1px solid var(--accent); }
-        .keno-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 20px; max-width: 400px; margin: auto; }
-        .cell { background: var(--card); height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; font-weight: bold; border: 1px solid #222; }
-        .cell.selected { background: var(--blue); border-color: white; }
-        .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 20px; border-top: 1px solid #333; box-sizing: border-box; }
-        .bet-btn { width: 100%; background: var(--green); border: none; color: white; font-weight: bold; font-size: 18px; border-radius: 10px; height: 50px; cursor: pointer; }
+        input { padding: 10px; border-radius: 5px; border: none; margin-bottom: 10px; width: 200px; }
+        button { padding: 10px 20px; background: var(--green); color: white; border: none; border-radius: 5px; cursor: pointer; }
     </style>
 </head>
 <body>
 
-<div id="auth-screen" class="auth-container">
-    <div class="auth-card">
-        <h2 style="color:var(--accent)">KENO BET</h2>
-        <input type="number" id="phone" placeholder="ስልክ ቁጥር">
-        <input type="password" id="pass" placeholder="ሚስጥር ቁጥር">
-        <button class="btn-gold" onclick="handleLogin()">ይግቡ / ይመዝገቡ</button>
-        <p id="msg" style="color:red; font-size:12px; margin-top:10px;"></p>
-    </div>
+<div id="login-screen">
+    <h2>እንኳን ደህና መጡ</h2>
+    <input type="text" id="username-input" placeholder="ስምዎን ያስገቡ...">
+    <button onclick="login()">ይግቡ</button>
 </div>
 
-<div id="game-screen" class="hidden">
-    <header>
-        <div id="u-phone" style="font-weight:bold;">-</div>
-        <div class="balance-box" id="u-balance">100.00 ETB</div>
-    </header>
-    <div style="padding: 20px; text-align: center;">
-        <h1 id="timer" style="font-size:40px; color:var(--accent); margin:0;">00:60</h1>
-    </div>
+<header>
+    <div id="user-display">Sam</div>
+    <div class="balance-box"><span id="u-wallet">500.00</span> ETB</div>
+</header>
+
+<div class="top-display-area" id="top-display">
+    <div style="color:#444; font-size:12px;">ምርጫዎ እዚህ ይታያሉ</div>
+</div>
+
+<div class="info-panel">
+    <div id="timer-display" class="timer-ui">01:00</div>
+    <div id="win-msg" class="win-estimate">MAX WIN: 0.00 ETB</div>
+</div>
+
+<div class="grid-container">
     <div class="keno-grid" id="grid"></div>
-    <div class="controls">
-        <button class="bet-btn" onclick="buyTicket()">BET (ትኬት ቁረጥ)</button>
+</div>
+
+<div class="tickets-area" id="ticket-list"></div>
+
+<div class="controls">
+    <div class="bet-row">
+        <div class="stepper">
+            <button onclick="adjBet(-5)">-</button>
+            <span id="bet-ui" style="font-weight:900;">10</span>
+            <button onclick="adjBet(5)">+</button>
+        </div>
+        <button class="bet-btn" onclick="buyTicket()">ቲኬት ቁረጥ</button>
     </div>
 </div>
 
 <script>
-    const S_URL ='https://nvfavqzltcmzbvhvauxc.supabase.co';
-    const S_KEY = 'process.env.SUPABASE_KEY';
-    const supabase = window.supabase.createClient(S_URL, S_KEY);
+    // 1. Supabase Setup - በራስህ ተካቸው
+    const SB_URL = "የአንተ_SUPABASE_URL_እዚህ";
+    const SB_KEY = "የአንተ_SUPABASE_ANON_KEY_እዚህ";
+    const supabase = supabase.createClient(SB_URL, SB_KEY);
 
-    let selected = [], timeLeft = 60;
+    let user = { name: "", balance: 500 };
+    let selected = [];
+    let stake = 10;
+    let tickets = [];
+    let timeLeft = 60;
+    let isDrawing = false;
 
-    async function handleLogin() {
-        const ph = document.getElementById('phone').value;
-        const ps = document.getElementById('pass').value;
-        const msg = document.getElementById('msg');
-        if(!ph || !ps) return;
+    // Keno Paytable (ምሳሌ)
+    const payTable = {
+        10: [{h: 5, m: 2}, {h: 6, m: 10}, {h: 7, m: 50}, {h: 8, m: 500}, {h: 9, m: 2000}, {h: 10, m: 10000}]
+    };
 
-        try {
-            // ሎጊን መሞከር
-            let { data: user, error: fError } = await supabase.from('users').select('*').eq('phone', ph).maybeSingle();
-            if (fError) throw fError;
-
-            if (user) {
-                if (user.password === ps) { loginSuccess(user); }
-                else { msg.innerText = "የተሳሳተ ሚስጥር ቁጥር!"; }
-            } else {
-                // አዲስ ምዝገባ
-                const { data: newUser, error: iError } = await supabase
-                    .from('users')
-                    .insert([{ phone: ph, password: ps, balance: 100 }])
-                    .select().single();
-                if (iError) throw iError;
-                loginSuccess(newUser);
-            }
-        } catch (e) {
-            msg.innerText = "ስህተት፦ " + e.message;
-        }
-    }
-
-    function loginSuccess(user) {
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('game-screen').classList.remove('hidden');
-        document.getElementById('u-phone').innerText = user.phone;
-        document.getElementById('u-balance').innerText = user.balance.toFixed(2) + " ETB";
+    function login() {
+        const name = document.getElementById('username-input').value;
+        if(!name) return;
+        user.name = name;
+        document.getElementById('user-display').innerText = name;
+        document.getElementById('login-screen').classList.add('hidden');
         initGrid();
-        startTimer();
+        setInterval(tick, 1000);
     }
 
     function initGrid() {
-        const g = document.getElementById('grid');
-        g.innerHTML = '';
+        const grid = document.getElementById('grid');
         for(let i=1; i<=80; i++) {
-            let c = document.createElement('div');
-            c.className = 'cell'; c.innerText = i;
-            c.onclick = () => {
-                if(c.classList.contains('selected')) {
-                    c.classList.remove('selected');
-                    selected = selected.filter(n => n !== i);
-                } else if(selected.length < 10) {
-                    c.classList.add('selected');
-                    selected.push(i);
-                }
-            };
-            g.appendChild(c);
+            const cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.innerText = i;
+            cell.onclick = () => toggleNum(i, cell);
+            grid.appendChild(cell);
         }
     }
 
-    function startTimer() {
-        setInterval(() => {
-            timeLeft--;
-            if(timeLeft < 0) timeLeft = 60;
-            document.getElementById('timer').innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
-        }, 1000);
+    function toggleNum(n, el) {
+        if(isDrawing) return;
+        if(selected.includes(n)) {
+            selected = selected.filter(x => x !== n);
+            el.classList.remove('selected');
+        } else if(selected.length < 10) {
+            selected.push(n);
+            el.classList.add('selected');
+        }
+        updateUI();
     }
 
-    function buyTicket() {
-        if(selected.length === 0) { alert("ቁጥሮችን ይምረጡ!"); return; }
-        alert(selected.length + " ቁጥሮች ተመርጠዋል። መልካም እድል!");
+    function updateUI() {
+        const topArea = document.getElementById('top-display');
+        if(selected.length > 0) {
+            topArea.innerHTML = selected.map(n => `<div class="ball selected-ball">${n}</div>`).join('');
+            document.getElementById('win-msg').innerText = `SELECTED: ${selected.length} numbers`;
+        } else {
+            topArea.innerHTML = '<div style="color:#444; font-size:12px;">ምርጫዎ እዚህ ይታያሉ</div>';
+        }
+    }
+
+    function adjBet(v) {
+        stake = Math.max(5, stake + v);
+        document.getElementById('bet-ui').innerText = stake;
+    }
+
+    async function buyTicket() {
+        if(selected.length < 1 || user.balance < stake || isDrawing) return;
+
+        const { data, error } = await supabase
+            .from('keno_tickets')
+            .insert([{
+                player_name: user.name,
+                selected_numbers: [...selected],
+                stake: stake,
+                status: 'pending'
+            }])
+            .select();
+
+        if (error) {
+            alert("Database Error!");
+            return;
+        }
+
+        user.balance -= stake;
+        tickets.push({ ...data[0], nums: [...selected], amt: stake, won: 0 });
+        document.getElementById('u-wallet').innerText = user.balance.toFixed(2);
+        renderTickets();
+        clearGrid();
+    }
+
+    function renderTickets(drawn = []) {
+        const list = document.getElementById('ticket-list');
+        list.innerHTML = tickets.map(t => `
+            <div class="ticket-card ${t.won > 0 ? 'winner' : ''}">
+                <div>${t.nums.map(n => `<span class="t-num ${drawn.includes(n) ? 'match' : ''}">${n}</span>`).join('')}</div>
+                <div style="font-size:10px; margin-top:5px;">Stake: ${t.amt} | ID: ${t.id} ${t.won > 0 ? `| WON: ${t.won}` : ''}</div>
+            </div>
+        `).join('');
+    }
+
+    function clearGrid() {
+        selected = [];
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
+        updateUI();
+    }
+
+    function tick() {
+        if(isDrawing) return;
+        timeLeft--;
+        if(timeLeft <= 0) runDraw();
+        document.getElementById('timer-display').innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
+    }
+
+    async function runDraw() {
+        isDrawing = true;
+        let drawn = [];
+        const itv = setInterval(async () => {
+            let n;
+            do { n = Math.floor(Math.random()*80)+1; } while(drawn.includes(n));
+            drawn.push(n);
+            
+            const ball = document.createElement('div');
+            ball.className = 'ball drawn-ball';
+            ball.innerText = n;
+            document.getElementById('top-display').appendChild(ball);
+            document.querySelectorAll('.cell')[n-1].classList.add('miss');
+
+            if(drawn.length >= 20) {
+                clearInterval(itv);
+                await finalizeGame(drawn);
+            }
+        }, 300);
+    }
+
+    async function finalizeGame(drawn) {
+        for(let t of tickets) {
+            const hits = t.nums.filter(n => drawn.includes(n)).length;
+            let winAmount = 0;
+            const rules = payTable[t.nums.length];
+            if(rules) {
+                const rule = rules.find(r => r.h === hits);
+                if(rule) winAmount = t.amt * rule.m;
+            }
+
+            // Supabase ላይ አዘምን
+            await supabase
+                .from('keno_tickets')
+                .update({ draw_numbers: drawn, won: winAmount, status: 'completed' })
+                .eq('id', t.id);
+            
+            t.won = winAmount;
+            user.balance += winAmount;
+        }
+
+        document.getElementById('u-wallet').innerText = user.balance.toFixed(2);
+        renderTickets(drawn);
+
+        setTimeout(() => {
+            tickets = [];
+            timeLeft = 60;
+            isDrawing = false;
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('miss'));
+            document.getElementById('top-display').innerHTML = "";
+            renderTickets();
+        }, 5000);
     }
 </script>
 </body>
