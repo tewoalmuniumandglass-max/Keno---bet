@@ -6,94 +6,83 @@
     <title>Keno Bet</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #06090f; --card: #111621; --accent: #ffd700; --blue: #007bff; --green: #2ecc71; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; text-align: center; }
+        body { font-family: sans-serif; background: #06090f; color: white; text-align: center; padding: 20px; }
+        .card { background: #111621; padding: 30px; border-radius: 15px; border: 1px solid #ffd700; max-width: 350px; margin: auto; }
+        input { width: 90%; padding: 12px; margin: 10px 0; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; }
+        button { width: 95%; padding: 12px; background: #ffd700; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #000; }
         .hidden { display: none !important; }
-        
-        /* Auth Styles */
-        .auth-card { padding: 40px; margin-top: 50px; }
-        input { width: 80%; padding: 12px; margin: 10px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; }
-        .btn { width: 85%; padding: 15px; background: var(--accent); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
-
-        /* Game Styles */
-        header { background: #0b4a8f; padding: 15px; display: flex; justify-content: space-between; border-bottom: 2px solid var(--accent); }
-        .keno-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 20px; max-width: 500px; margin: auto; }
-        .cell { background: var(--card); padding: 15px; border-radius: 8px; border: 1px solid #222; font-weight: bold; cursor: pointer; }
-        .cell.selected { background: var(--blue); border-color: #fff; }
-        .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 20px; box-sizing: border-box; }
     </style>
 </head>
 <body>
 
-<div id="auth-screen">
-    <div class="auth-card">
-        <h1 style="color:var(--accent)">KENO BET</h1>
-        <input type="number" id="phone" placeholder="ስልክ ቁጥር">
-        <input type="password" id="pass" placeholder="ሚስጥር ቁጥር">
-        <button class="btn" onclick="login()">ይግቡ / ይመዝገቡ</button>
-        <p id="msg" style="color:red"></p>
-    </div>
+<div id="auth-screen" class="card">
+    <h2 style="color:#ffd700">KENO BET</h2>
+    <input type="number" id="phone" placeholder="ስልክ ቁጥር">
+    <input type="password" id="pass" placeholder="ሚስጥር ቁጥር">
+    <button onclick="login()">ይግቡ / ይመዝገቡ</button>
+    <p id="msg" style="color:red; font-size:12px; margin-top:10px;"></p>
 </div>
 
 <div id="game-screen" class="hidden">
-    <header>
-        <div id="u-phone"></div>
-        <div id="u-balance" style="color:var(--accent); font-weight:bold;">0.00 ETB</div>
-    </header>
-    <h2 id="timer" style="font-size:40px; color:var(--accent)">00:60</h2>
-    <div class="keno-grid" id="grid"></div>
-    <div class="controls">
-        <button class="btn" style="background:var(--green); color:white" onclick="bet()">BET (ትኬት ቁረጥ)</button>
-    </div>
+    <h1 style="color:#ffd700">እንኳን መጡ!</h1>
+    <div id="u-display" style="font-size:20px; margin-bottom:20px;"></div>
+    <div id="u-balance" style="font-size:24px; color:#2ecc71; font-weight:bold;"></div>
+    <button onclick="location.reload()" style="background:#444; color:white; margin-top:20px;">ውጣ (Logout)</button>
 </div>
 
 <script>
+    // ያንተ ትክክለኛ የ Supabase መረጃዎች
     const S_URL = 'https://mvfovqztomzbvhvauxc.supabase.co';
     const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12Zm92cXp0b216YnZodmF1eGMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczOTYyOTgxMiwiZXhwIjoyMDU1MjA1ODEyfQ.sb_publishable_12xn0x6_jG9f6vY_GjL-6vL-6vL-6vL-6vL-6vL';
-    const supabase = window.supabase.createClient(S_URL, S_KEY);
-
-    let user = null, selected = [];
+    
+    const supabaseClient = supabase.createClient(S_URL, S_KEY);
 
     async function login() {
         const ph = document.getElementById('phone').value;
         const ps = document.getElementById('pass').value;
-        if(!ph || !ps) return;
+        const msg = document.getElementById('msg');
+        
+        if(!ph || !ps) { msg.innerText = "እባክዎ ሁሉንም ይሙሉ"; return; }
+        msg.innerText = "በመግባት ላይ...";
 
         try {
-            // ተጠቃሚውን መፈለግ
-            let { data: existingUser } = await supabase.from('users').select('*').eq('phone', ph).maybeSingle();
+            // 1. ተጠቃሚውን መፈለግ
+            let { data: user, error: fetchError } = await supabaseClient
+                .from('users')
+                .select('*')
+                .eq('phone', ph)
+                .maybeSingle();
 
-            if (existingUser) {
-                if (existingUser.password === ps) { user = existingUser; start(); }
-                else document.getElementById('msg').innerText = "የተሳሳተ ሚስጥር ቁጥር!";
+            if (fetchError) throw fetchError;
+
+            if (user) {
+                if (user.password === ps) {
+                    showGame(user);
+                } else {
+                    msg.innerText = "የተሳሳተ ሚስጥር ቁጥር!";
+                }
             } else {
-                // መመዝገብ
-                const { data: newUser, error } = await supabase.from('users').insert([{ phone: ph, password: ps, balance: 100 }]).select().single();
-                if(error) throw error;
-                user = newUser; start();
+                // 2. አዲስ ተጠቃሚ መመዝገብ
+                const { data: newUser, error: insertError } = await supabaseClient
+                    .from('users')
+                    .insert([{ phone: ph, password: ps, balance: 100 }])
+                    .select()
+                    .single();
+
+                if (insertError) throw insertError;
+                showGame(newUser);
             }
-        } catch (e) { 
-            document.getElementById('msg').innerText = "ግንኙነት የለም! RLS አጥፋው።";
+        } catch (err) {
+            console.error(err);
+            msg.innerText = "ስህተት ተፈጥሯል! (RLS ጠፍቷል?)";
         }
     }
 
-    function start() {
+    function showGame(user) {
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('game-screen').classList.remove('hidden');
-        document.getElementById('u-phone').innerText = user.phone;
-        document.getElementById('u-balance').innerText = user.balance.toFixed(2) + " ETB";
-        
-        // Grid መፍጠር
-        const g = document.getElementById('grid');
-        for(let i=1; i<=20; i++) { // ለሙከራ 20 ቁጥሮች
-            let c = document.createElement('div');
-            c.className = 'cell'; c.innerText = i;
-            c.onclick = () => {
-                c.classList.toggle('selected');
-                selected.push(i);
-            }
-            g.appendChild(c);
-        }
+        document.getElementById('u-display').innerText = "ስልክ: " + user.phone;
+        document.getElementById('u-balance').innerText = "ቀሪ ሂሳብ: " + user.balance + " ETB";
     }
 </script>
 </body>
