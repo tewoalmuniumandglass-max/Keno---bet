@@ -3,146 +3,84 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keno Premium - Pro</title>
+    <title>Keno Premium Fix</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #06090f; --card: #111621; --accent: #ffd700; --blue: #007bff; --green: #2ecc71; --red: #e74c3c; }
-        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; user-select: none; }
+        :root { --bg: #06090f; --card: #111621; --accent: #ffd700; --blue: #007bff; --green: #2ecc71; }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; padding: 0; overflow-x: hidden; }
         
-        /* Auth Styles */
-        .auth-container { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; }
-        .auth-card { background: var(--card); padding: 30px; border-radius: 15px; width: 320px; text-align: center; border: 1px solid var(--accent); }
-        .auth-card input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
-        .auth-card button { width: 100%; padding: 12px; background: var(--accent); border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
-
-        header { background: #0b4a8f; padding: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
-        .balance-box { background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 15px; border: 1px solid var(--accent); color: var(--accent); font-weight: bold; }
+        header { background: #0b4a8f; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
+        .balance-box { background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; border: 1px solid var(--accent); color: var(--accent); font-weight: bold; }
         
-        .timer-area { background: #000; padding: 10px; text-align: center; font-size: 24px; font-weight: bold; color: var(--accent); border-bottom: 1px solid #333; }
-        .top-display { min-height: 60px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 10px; background: #111; }
-        .ball { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; background: var(--accent); color: #000; font-size: 12px; }
+        .timer-display { font-size: 32px; font-weight: bold; color: var(--accent); text-align: center; padding: 10px; background: #000; }
+        .top-display { min-height: 50px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 10px; background: #161b22; }
+        .ball { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; background: var(--accent); color: #000; font-size: 14px; animation: pop 0.3s; }
 
-        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; padding: 15px; margin-bottom: 150px; }
-        .cell { background: var(--card); height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; font-weight: bold; border: 1px solid #222; }
-        .cell.selected { background: var(--blue); border-color: white; }
-        .cell.hit { background: var(--green); color: white; }
-        .cell.miss { background: #444; color: #888; }
+        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; padding: 15px; margin-bottom: 160px; }
+        .cell { background: var(--card); height: 45px; display: flex; align-items: center; justify-content: center; border-radius: 5px; cursor: pointer; font-weight: bold; border: 1px solid #222; transition: 0.2s; }
+        .cell.selected { background: var(--blue); border-color: #fff; transform: scale(0.95); }
+        .cell.hit { background: var(--green); color: white; box-shadow: 0 0 10px var(--green); }
+        .cell.miss { background: #333; color: #666; }
 
-        .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 15px; border-top: 1px solid #333; box-sizing: border-box; }
-        .bet-btn { width: 100%; background: var(--green); border: none; color: white; font-weight: bold; font-size: 18px; border-radius: 8px; height: 48px; cursor: pointer; }
-        
-        .hidden { display: none !important; }
+        .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 20px; border-top: 1px solid #333; box-sizing: border-box; }
+        .bet-btn { width: 100%; background: var(--green); border: none; color: white; font-weight: bold; font-size: 22px; border-radius: 12px; height: 55px; cursor: pointer; }
+
+        @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
     </style>
 </head>
-<body>
+<body onload="initGrid()">
 
-<div id="auth-screen" class="auth-container">
-    <div class="auth-card">
-        <h2 style="color:var(--accent)">KENO LOGIN</h2>
-        <input type="number" id="reg-phone" placeholder="ስልክ ቁጥር">
-        <input type="password" id="reg-pass" placeholder="ሚስጥር ቁጥር">
-        <button onclick="handleLogin()">ይግቡ</button>
-        <p id="auth-msg" style="color:red; font-size:12px; margin-top:10px;"></p>
+<header>
+    <div id="u-display-phone" style="font-weight:bold;">Gashabet User</div>
+    <div class="balance-box" id="u-balance">500.00 ETB</div>
+</header>
+
+<div class="timer-display" id="timer-display">00:60</div>
+<div class="top-display" id="top-display"></div>
+
+<div class="keno-grid" id="main-grid"></div>
+
+<div class="controls">
+    <div style="display:flex; justify-content:space-between; margin-bottom:10px; font-weight:bold;">
+        <span>BET: 10 ETB</span>
+        <span id="selected-count" style="color:var(--accent)">Selected: 0/10</span>
     </div>
-</div>
-
-<div id="game-screen" class="hidden">
-    <header>
-        <div id="u-display-phone">---</div>
-        <div class="balance-box" id="u-balance">0.00 ETB</div>
-    </header>
-    
-    <div class="timer-area" id="timer-display">00:60</div>
-    <div class="top-display" id="top-display"></div>
-    
-    <div class="keno-grid" id="main-grid"></div>
-
-    <div class="controls">
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
-            <span>BET: 10 ETB</span>
-            <span id="selected-count">Selected: 0/10</span>
-        </div>
-        <button class="bet-btn" onclick="buyTicket()">BET (ትኬት ቁረጥ)</button>
-    </div>
+    <button class="bet-btn" onclick="buyTicket()">BET (ትኬት ቁረጥ)</button>
 </div>
 
 <script>
-    const SUPABASE_URL = 'https://mvfovqztomzbvhvauxc.supabase.co';
-    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12Zm92cXp0b216YnZodmF1eGMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczOTYyOTgxMiwiZXhwIjoyMDU1MjA1ODEyfQ.sb_publishable_12xn0x6_jG9f6vY_GjL-6vL-6vL-6vL-6vL-6vL'; 
-    const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    let selected = [], timeLeft = 60, isDrawing = false;
 
-    let user = null, selected = [], timeLeft = 60, isDrawing = false;
-
-    async function handleLogin() {
-        const phone = document.getElementById('reg-phone').value;
-        const pass = document.getElementById('reg-pass').value;
-        if(!phone || !pass) return;
-
-        let { data: dbUser } = await supabaseClient.from('users').select('*').eq('phone', phone).maybeSingle();
-        
-        if (dbUser) {
-            if (dbUser.password === pass) { user = dbUser; enterGame(); }
-            else { document.getElementById('auth-msg').innerText = "የተሳሳተ ፓስወርድ!"; }
-        } else {
-            const { data: newUser } = await supabaseClient.from('users').insert([{ phone, password: pass, balance: 100 }]).select().single();
-            user = newUser; enterGame();
+    // 1. Grid-ኡን ወዲያውኑ እንዲሳል ማድረግ
+    function initGrid() {
+        const grid = document.getElementById('main-grid');
+        grid.innerHTML = ""; // ማጽዳት
+        for(let i=1; i<=80; i++) {
+            const c = document.createElement('div');
+            c.className = 'cell';
+            c.id = 'cell-' + i;
+            c.innerText = i;
+            c.onclick = () => toggleNumber(i, c);
+            grid.appendChild(c);
         }
-    }
-
-    function enterGame() {
-        document.getElementById('auth-screen').classList.add('hidden');
-        document.getElementById('game-screen').classList.remove('hidden');
-        document.getElementById('u-display-phone').innerText = user.phone;
-        updateBalanceUI();
-        initGrid(); 
         setInterval(tick, 1000);
     }
 
-    function initGrid() {
-        const grid = document.getElementById('main-grid');
-        grid.innerHTML = "";
-        for(let i=1; i<=80; i++) {
-            const c = document.createElement('div');
-            c.className = 'cell'; c.id = 'cell-' + i; c.innerText = i;
-            c.onclick = () => {
-                if(isDrawing) return;
-                if(c.classList.contains('selected')) { 
-                    c.classList.remove('selected'); 
-                    selected = selected.filter(n => n !== i); 
-                } else if(selected.length < 10) { 
-                    c.classList.add('selected'); 
-                    selected.push(i); 
-                }
-                document.getElementById('selected-count').innerText = `Selected: ${selected.length}/10`;
-            };
-            grid.appendChild(c);
+    function toggleNumber(n, el) {
+        if(isDrawing) return;
+        if(selected.includes(n)) {
+            selected = selected.filter(x => x !== n);
+            el.classList.remove('selected');
+        } else if(selected.length < 10) {
+            selected.push(n);
+            el.classList.add('selected');
         }
-    }
-
-    async function buyTicket() {
-        if(selected.length === 0 || isDrawing) return;
-        const stake = 10;
-        if(user.balance < stake) { alert("በቂ ብር የለዎትም!"); return; }
-
-        const { data, error } = await supabaseClient.from('tickets').insert([{
-            player_phone: user.phone,
-            selected_numbers: selected,
-            stake: stake
-        }]);
-
-        if(!error) {
-            user.balance -= stake;
-            updateBalanceUI();
-            alert("ትኬት ተቆርጧል!");
-            // ባዶ ማድረግ
-            selected = [];
-            document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
-        }
+        document.getElementById('selected-count').innerText = `Selected: ${selected.length}/10`;
     }
 
     function tick() {
         if(isDrawing) return;
-        timeLeft--; 
+        timeLeft--;
         if(timeLeft <= 0) runDraw();
         document.getElementById('timer-display').innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
     }
@@ -153,31 +91,44 @@
         document.getElementById('top-display').innerHTML = "";
 
         const itv = setInterval(() => {
-            let n = Math.floor(Math.random()*80)+1;
-            while(drawn.includes(n)) n = Math.floor(Math.random()*80)+1;
+            let n = Math.floor(Math.random() * 80) + 1;
+            while(drawn.includes(n)) n = Math.floor(Math.random() * 80) + 1;
             drawn.push(n);
-            
-            const ball = document.createElement('div'); ball.className = 'ball'; ball.innerText = n;
+
+            const ball = document.createElement('div');
+            ball.className = 'ball';
+            ball.innerText = n;
             document.getElementById('top-display').appendChild(ball);
-            
+
             const cell = document.getElementById('cell-' + n);
-            if(cell) cell.classList.add(cell.classList.contains('selected') ? 'hit' : 'miss');
-            
+            if(cell) {
+                if(cell.classList.contains('selected')) cell.classList.add('hit');
+                else cell.classList.add('miss');
+            }
+
             count++;
-            if(count >= 20) { 
-                clearInterval(itv); 
+            if(count >= 20) {
+                clearInterval(itv);
                 setTimeout(resetGame, 5000);
             }
         }, 400);
     }
 
     function resetGame() {
-        isDrawing = false; timeLeft = 60;
+        isDrawing = false;
+        timeLeft = 60;
+        selected = [];
         document.getElementById('top-display').innerHTML = "";
-        document.querySelectorAll('.cell').forEach(c => c.classList.remove('hit', 'miss'));
+        document.getElementById('selected-count').innerText = "Selected: 0/10";
+        document.querySelectorAll('.cell').forEach(c => {
+            c.classList.remove('selected', 'hit', 'miss');
+        });
     }
 
-    function updateBalanceUI() { document.getElementById('u-balance').innerText = user.balance.toFixed(2) + " ETB"; }
+    function buyTicket() {
+        if(selected.length === 0) { alert("እባክዎ ቁጥር ይምረጡ!"); return; }
+        alert("ትኬት ቁጥር " + selected.join(', ') + " ተቆርጧል!");
+    }
 </script>
 </body>
 </html>
