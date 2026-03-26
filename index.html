@@ -3,27 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keno Bet & Aviator</title>
+    <title>Keno Premium - Pro</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
         :root { --bg: #06090f; --card: #111621; --accent: #ffd700; --blue: #007bff; --green: #2ecc71; --red: #e74c3c; }
-        body { font-family: sans-serif; background: radial-gradient(circle, #1a2a44 0%, var(--bg) 100%); color: white; margin: 0; user-select: none; overflow-x: hidden; }
-        .auth-container { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; align-items: center; justify-content: center; }
-        .auth-card { background: var(--card); padding: 30px; border-radius: 20px; width: 300px; text-align: center; border: 1px solid var(--accent); }
-        .auth-card input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
-        .auth-card button { width: 100%; padding: 12px; background: linear-gradient(45deg, #b8860b, #ffd700); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #000; }
-        header { background: #0b4a8f; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
-        .balance-box { background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; color: var(--accent); font-weight: bold; border: 1px solid var(--accent); }
-        .aviator-scene { height: 120px; background: #000; position: relative; overflow: hidden; border-bottom: 2px solid #333; }
-        #airplane { position: absolute; width: 50px; bottom: 10px; left: -60px; transition: all 0.3s linear; z-index: 10; filter: drop-shadow(0 0 10px var(--red)); }
-        .top-display { min-height: 50px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 10px; background: rgba(0,0,0,0.3); }
-        .ball { width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 13px; background: var(--accent); color: #000; }
-        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; padding: 15px; margin-bottom: 180px; }
-        .cell { background: var(--card); height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; border: 1px solid #222; }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; user-select: none; }
+        
+        /* Auth Styles */
+        .auth-container { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        .auth-card { background: var(--card); padding: 30px; border-radius: 15px; width: 320px; text-align: center; border: 1px solid var(--accent); }
+        .auth-card input { width: 100%; padding: 12px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
+        .auth-card button { width: 100%; padding: 12px; background: var(--accent); border: none; font-weight: bold; cursor: pointer; border-radius: 5px; }
+
+        header { background: #0b4a8f; padding: 12px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
+        .balance-box { background: rgba(0,0,0,0.5); padding: 5px 12px; border-radius: 15px; border: 1px solid var(--accent); color: var(--accent); font-weight: bold; }
+        
+        .timer-area { background: #000; padding: 10px; text-align: center; font-size: 24px; font-weight: bold; color: var(--accent); border-bottom: 1px solid #333; }
+        .top-display { min-height: 60px; display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; padding: 10px; background: #111; }
+        .ball { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; background: var(--accent); color: #000; font-size: 12px; }
+
+        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; padding: 15px; margin-bottom: 150px; }
+        .cell { background: var(--card); height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; font-weight: bold; border: 1px solid #222; }
         .cell.selected { background: var(--blue); border-color: white; }
-        .cell.hit { background: var(--green) !important; color: white; }
-        .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 15px; border-top: 1px solid #333; z-index: 100; box-sizing: border-box; }
-        .bet-btn { width: 100%; background: var(--green); border: none; color: white; font-weight: bold; font-size: 20px; border-radius: 12px; height: 50px; cursor: pointer; }
+        .cell.hit { background: var(--green); color: white; }
+        .cell.miss { background: #444; color: #888; }
+
+        .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 15px; border-top: 1px solid #333; box-sizing: border-box; }
+        .bet-btn { width: 100%; background: var(--green); border: none; color: white; font-weight: bold; font-size: 18px; border-radius: 8px; height: 48px; cursor: pointer; }
+        
         .hidden { display: none !important; }
     </style>
 </head>
@@ -31,60 +38,54 @@
 
 <div id="auth-screen" class="auth-container">
     <div class="auth-card">
-        <h2 style="color:var(--accent)">KENO BET</h2>
+        <h2 style="color:var(--accent)">KENO LOGIN</h2>
         <input type="number" id="reg-phone" placeholder="ስልክ ቁጥር">
         <input type="password" id="reg-pass" placeholder="ሚስጥር ቁጥር">
-        <button onclick="handleLogin()">ይግቡ / ይመዝገቡ</button>
+        <button onclick="handleLogin()">ይግቡ</button>
         <p id="auth-msg" style="color:red; font-size:12px; margin-top:10px;"></p>
     </div>
 </div>
 
 <div id="game-screen" class="hidden">
     <header>
-        <div id="u-display-phone" style="font-weight:bold;">-</div>
+        <div id="u-display-phone">---</div>
         <div class="balance-box" id="u-balance">0.00 ETB</div>
     </header>
-    <div class="aviator-scene">
-        <div id="timer-display" style="position:absolute; width:100%; text-align:center; top:10px; font-size:30px; font-weight:bold; color:var(--accent); z-index:5;">00:60</div>
-        <svg id="airplane" viewBox="0 0 24 24" fill="var(--red)"><path d="M21,16L22,13L21,10L15,10L13,4L11,4L12,10L6,10L4,7L2,7L3,10L2,13L3,16L4,16L6,13L12,13L11,19L13,19L15,13L21,13L21,16Z" /></svg>
-    </div>
+    
+    <div class="timer-area" id="timer-display">00:60</div>
     <div class="top-display" id="top-display"></div>
+    
     <div class="keno-grid" id="main-grid"></div>
+
     <div class="controls">
+        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+            <span>BET: 10 ETB</span>
+            <span id="selected-count">Selected: 0/10</span>
+        </div>
         <button class="bet-btn" onclick="buyTicket()">BET (ትኬት ቁረጥ)</button>
     </div>
 </div>
 
 <script>
-    // ሳም፣ ያንተ መረጃዎች በትክክል እዚህ ገብተዋል
     const SUPABASE_URL = 'https://mvfovqztomzbvhvauxc.supabase.co';
     const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12Zm92cXp0b216YnZodmF1eGMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczOTYyOTgxMiwiZXhwIjoyMDU1MjA1ODEyfQ.sb_publishable_12xn0x6_jG9f6vY_GjL-6vL-6vL-6vL-6vL-6vL'; 
-
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     let user = null, selected = [], timeLeft = 60, isDrawing = false;
 
     async function handleLogin() {
         const phone = document.getElementById('reg-phone').value;
         const pass = document.getElementById('reg-pass').value;
-        const msg = document.getElementById('auth-msg');
-        if(!phone || !pass) { msg.innerText = "እባክዎ ሁሉንም ይሙሉ"; return; }
+        if(!phone || !pass) return;
 
-        try {
-            // ተጠቃሚውን መፈለግ
-            let { data: dbUser, error: searchError } = await supabaseClient.from('users').select('*').eq('phone', phone).maybeSingle();
-            
-            if (dbUser) {
-                if (dbUser.password === pass) { user = dbUser; enterGame(); }
-                else { msg.innerText = "የተሳሳተ ሚስጥር ቁጥር!"; }
-            } else {
-                // አዲስ ተጠቃሚ መመዝገብ
-                const { data: newUser, error: regError } = await supabaseClient.from('users').insert([{ phone, password: pass, balance: 100 }]).select().single();
-                if(regError) throw regError;
-                user = newUser; enterGame();
-            }
-        } catch (e) { 
-            console.error(e);
-            msg.innerText = "ግንኙነት ተቋርጧል! (Check Supabase RLS)"; 
+        let { data: dbUser } = await supabaseClient.from('users').select('*').eq('phone', phone).maybeSingle();
+        
+        if (dbUser) {
+            if (dbUser.password === pass) { user = dbUser; enterGame(); }
+            else { document.getElementById('auth-msg').innerText = "የተሳሳተ ፓስወርድ!"; }
+        } else {
+            const { data: newUser } = await supabaseClient.from('users').insert([{ phone, password: pass, balance: 100 }]).select().single();
+            user = newUser; enterGame();
         }
     }
 
@@ -105,10 +106,37 @@
             c.className = 'cell'; c.id = 'cell-' + i; c.innerText = i;
             c.onclick = () => {
                 if(isDrawing) return;
-                if(c.classList.contains('selected')) { c.classList.remove('selected'); selected = selected.filter(n => n !== i); }
-                else if(selected.length < 10) { c.classList.add('selected'); selected.push(i); }
+                if(c.classList.contains('selected')) { 
+                    c.classList.remove('selected'); 
+                    selected = selected.filter(n => n !== i); 
+                } else if(selected.length < 10) { 
+                    c.classList.add('selected'); 
+                    selected.push(i); 
+                }
+                document.getElementById('selected-count').innerText = `Selected: ${selected.length}/10`;
             };
             grid.appendChild(c);
+        }
+    }
+
+    async function buyTicket() {
+        if(selected.length === 0 || isDrawing) return;
+        const stake = 10;
+        if(user.balance < stake) { alert("በቂ ብር የለዎትም!"); return; }
+
+        const { data, error } = await supabaseClient.from('tickets').insert([{
+            player_phone: user.phone,
+            selected_numbers: selected,
+            stake: stake
+        }]);
+
+        if(!error) {
+            user.balance -= stake;
+            updateBalanceUI();
+            alert("ትኬት ተቆርጧል!");
+            // ባዶ ማድረግ
+            selected = [];
+            document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected'));
         }
     }
 
@@ -122,8 +150,7 @@
     function runDraw() {
         isDrawing = true;
         let drawn = [], count = 0;
-        const plane = document.getElementById('airplane');
-        plane.style.left = '10%'; 
+        document.getElementById('top-display').innerHTML = "";
 
         const itv = setInterval(() => {
             let n = Math.floor(Math.random()*80)+1;
@@ -132,20 +159,22 @@
             
             const ball = document.createElement('div'); ball.className = 'ball'; ball.innerText = n;
             document.getElementById('top-display').appendChild(ball);
-            if(document.getElementById('cell-' + n)) document.getElementById('cell-' + n).classList.add('hit');
+            
+            const cell = document.getElementById('cell-' + n);
+            if(cell) cell.classList.add(cell.classList.contains('selected') ? 'hit' : 'miss');
             
             count++;
             if(count >= 20) { 
                 clearInterval(itv); 
-                plane.style.left = '110%';
-                setTimeout(() => {
-                    isDrawing = false; timeLeft = 60;
-                    document.getElementById('top-display').innerHTML = "";
-                    document.querySelectorAll('.cell').forEach(c => c.classList.remove('hit'));
-                    plane.style.left = '-60px';
-                }, 5000);
+                setTimeout(resetGame, 5000);
             }
-        }, 500);
+        }, 400);
+    }
+
+    function resetGame() {
+        isDrawing = false; timeLeft = 60;
+        document.getElementById('top-display').innerHTML = "";
+        document.querySelectorAll('.cell').forEach(c => c.classList.remove('hit', 'miss'));
     }
 
     function updateBalanceUI() { document.getElementById('u-balance').innerText = user.balance.toFixed(2) + " ETB"; }
