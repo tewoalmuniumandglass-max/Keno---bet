@@ -3,26 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Keno Bet & Aviator</title>
+    <title>Keno Bet</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root { --bg: #06090f; --card: #111621; --accent: #ffd700; --blue: #007bff; --green: #2ecc71; --red: #e74c3c; }
-        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; user-select: none; }
+        :root { --bg: #06090f; --card: #111621; --accent: #ffd700; --blue: #007bff; --green: #2ecc71; }
+        body { font-family: sans-serif; background: var(--bg); color: white; margin: 0; }
         .hidden { display: none !important; }
-        
-        /* Login Screen */
-        .auth-container { position: fixed; inset: 0; background: rgba(0,0,0,0.95); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+        .auth-container { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: flex; align-items: center; justify-content: center; z-index: 100; }
         .auth-card { background: var(--card); padding: 30px; border-radius: 20px; width: 320px; text-align: center; border: 1px solid var(--accent); }
         input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
         .btn-gold { width: 100%; padding: 12px; background: var(--accent); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; color: #000; }
-        
-        /* Game Screen */
         header { background: #0b4a8f; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
         .balance-box { background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; color: var(--accent); font-weight: bold; border: 1px solid var(--accent); }
-        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 5px; padding: 15px; margin-bottom: 150px; }
-        .cell { background: var(--card); height: 40px; display: flex; align-items: center; justify-content: center; border-radius: 4px; cursor: pointer; font-weight: bold; font-size: 14px; border: 1px solid #222; }
+        .keno-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; padding: 20px; max-width: 400px; margin: auto; }
+        .cell { background: var(--card); height: 50px; display: flex; align-items: center; justify-content: center; border-radius: 8px; cursor: pointer; font-weight: bold; border: 1px solid #222; }
         .cell.selected { background: var(--blue); border-color: white; }
-        .cell.hit { background: var(--green) !important; color: white; }
         .controls { position: fixed; bottom: 0; width: 100%; background: #111; padding: 20px; border-top: 1px solid #333; box-sizing: border-box; }
         .bet-btn { width: 100%; background: var(--green); border: none; color: white; font-weight: bold; font-size: 18px; border-radius: 10px; height: 50px; cursor: pointer; }
     </style>
@@ -44,28 +39,22 @@
         <div id="u-phone" style="font-weight:bold;">-</div>
         <div class="balance-box" id="u-balance">0.00 ETB</div>
     </header>
-    
-    <div style="padding: 20px;">
+    <div style="padding: 20px; text-align: center;">
         <h1 id="timer" style="font-size:40px; color:var(--accent); margin:0;">00:60</h1>
-        <p style="color:#888;">ቀጣይ እጣ እስኪወጣ</p>
     </div>
-
     <div class="keno-grid" id="grid"></div>
-
     <div class="controls">
         <button class="bet-btn" onclick="buyTicket()">BET (ትኬት ቁረጥ)</button>
     </div>
 </div>
 
 <script>
-    // Supabase Configuration
     const S_URL = 'https://mvfovqztomzbvhvauxc.supabase.co';
     const S_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im12Zm92cXp0b216YnZodmF1eGMiLCJyb2xlIjoiYW5vbiIsImlhdCI6MTczOTYyOTgxMiwiZXhwIjoyMDU1MjA1ODEyfQ.sb_publishable_12xn0x6_jG9f6vY_GjL-6vL-6vL-6vL-6vL-6vL';
     const supabase = window.supabase.createClient(S_URL, S_KEY);
 
-    let currentUser = null, selected = [], timeLeft = 60;
+    let selected = [], timeLeft = 60;
 
-    // Login/Register Function
     async function handleLogin() {
         const ph = document.getElementById('phone').value;
         const ps = document.getElementById('pass').value;
@@ -73,28 +62,28 @@
         if(!ph || !ps) return;
 
         try {
-            let { data: user, error: fetchError } = await supabase.from('users').select('*').eq('phone', ph).maybeSingle();
-            if (fetchError) throw fetchError;
+            // ሎጊን መሞከር
+            let { data: user, error: fError } = await supabase.from('users').select('*').eq('phone', ph).maybeSingle();
+            if (fError) throw fError;
 
             if (user) {
                 if (user.password === ps) { loginSuccess(user); }
                 else { msg.innerText = "የተሳሳተ ሚስጥር ቁጥር!"; }
             } else {
-                const { data: newUser, error: insError } = await supabase
-  .from('users')
-  .insert([{ phone: ph, password: ps, balance: 100 }]) // እዚህ ጋር [] እና balance የሚለው መስተካከል አለበት
-  .select()
-  .single();
-  if (insError) throw insError;
+                // አዲስ ምዝገባ
+                const { data: newUser, error: iError } = await supabase
+                    .from('users')
+                    .insert([{ phone: ph, password: ps, balance: 100 }])
+                    .select().single();
+                if (iError) throw iError;
                 loginSuccess(newUser);
             }
         } catch (e) {
-            msg.innerText = "ስህተት፦ RLS መጥፋቱን አረጋግጥ! (" + e.message + ")";
+            msg.innerText = "ስህተት፦ " + e.message;
         }
     }
 
     function loginSuccess(user) {
-        currentUser = user;
         document.getElementById('auth-screen').classList.add('hidden');
         document.getElementById('game-screen').classList.remove('hidden');
         document.getElementById('u-phone').innerText = user.phone;
@@ -105,6 +94,7 @@
 
     function initGrid() {
         const g = document.getElementById('grid');
+        g.innerHTML = '';
         for(let i=1; i<=80; i++) {
             let c = document.createElement('div');
             c.className = 'cell'; c.innerText = i;
@@ -130,8 +120,8 @@
     }
 
     function buyTicket() {
-        if(selected.length === 0) { alert("እባክዎ ቁጥሮችን ይምረጡ!"); return; }
-        alert(selected.length + " ቁጥሮችን መርጠዋል። መልካም እድል!");
+        if(selected.length === 0) { alert("ቁጥሮችን ይምረጡ!"); return; }
+        alert(selected.length + " ቁጥሮች ተመርጠዋል። መልካም እድል!");
     }
 </script>
 </body>
