@@ -15,11 +15,9 @@
         .auth-card input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
         .auth-card button { width: 100%; padding: 12px; background: linear-gradient(45deg, #b8860b, #ffd700); border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
 
-        /* Header */
         header { background: #0b4a8f; padding: 15px; display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid var(--accent); }
         .balance-box { background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; color: var(--accent); font-weight: bold; border: 1px solid var(--accent); }
 
-        /* Game UI */
         .top-display { background: #000; min-height: 80px; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 5px; padding: 10px; }
         .ball { width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 14px; margin: 2px; }
         .drawn-ball { background: var(--accent); color: #000; animation: bounce 0.5s ease; }
@@ -74,11 +72,11 @@
 </div>
 
 <script>
-    // --- እነዚህን መረጃዎች በገዛ ዳታቤዝህ መረጃ ተካቸው ---
-    const SUPABASE_URL = 'YOUR_SUPABASE_URL'; 
-    const SUPABASE_KEY = 'YOUR_SUPABASE_KEY';
+    // ሳም፣ ያንተ መረጃ እዚህ ጋር ገብቷል
+    const SUPABASE_URL = 'https://mvfovqztomzbvhvauxc.supabase.co'; 
+    // ከታች ባለው ኮቴ ውስጥ የ 'anon public' keyህን አስገባ
+    const SUPABASE_KEY = 'እዚህ_ጋር_ያመጣኸውን_anon_key_አስገባ';
     
-    // ስህተቱ እዚህ ጋር ተስተካክሏል (lib የሚለው ጠፍቷል)
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     let user = null;
@@ -93,42 +91,21 @@
         const pass = document.getElementById('reg-pass').value;
         const msg = document.getElementById('auth-msg');
 
-        if(!phone || !pass) {
-            msg.innerText = "እባክዎ መረጃ ያሟሉ";
-            return;
-        }
+        if(!phone || !pass) { msg.innerText = "እባክዎ መረጃ ያሟሉ"; return; }
 
         try {
-            // ተጠቃሚውን መፈለግ
-            let { data: dbUser, error } = await supabaseClient
-                .from('users')
-                .select('*')
-                .eq('phone', phone)
-                .single();
+            let { data: dbUser, error } = await supabaseClient.from('users').select('*').eq('phone', phone).single();
 
             if (dbUser) {
-                if (dbUser.password === pass) {
-                    user = dbUser;
-                    enterGame();
-                } else {
-                    msg.innerText = "የተሳሳተ ፓስወርድ!";
-                }
+                if (dbUser.password === pass) { user = dbUser; enterGame(); }
+                else { msg.innerText = "የተሳሳተ ፓስወርድ!"; }
             } else {
-                // ተጠቃሚው ከሌለ አዲስ መመዝገብ
                 const { data: newUser, error: regError } = await supabaseClient
-                    .from('users')
-                    .insert([{ phone: phone, password: pass, balance: 100 }])
-                    .select()
-                    .single();
-                
+                    .from('users').insert([{ phone: phone, password: pass, balance: 100 }]).select().single();
                 if(regError) throw regError;
-                user = newUser;
-                enterGame();
+                user = newUser; enterGame();
             }
-        } catch (err) {
-            console.error(err);
-            msg.innerText = "የግንኙነት ስህተት! (Check Supabase URL/Key)";
-        }
+        } catch (err) { msg.innerText = "የግንኙነት ስህተት! (Check anon key)"; }
     }
 
     function enterGame() {
@@ -145,52 +122,26 @@
         grid.innerHTML = "";
         for(let i=1; i<=80; i++) {
             const c = document.createElement('div');
-            c.className = 'cell'; 
-            c.id = 'cell-' + i;
-            c.innerText = i;
+            c.className = 'cell'; c.id = 'cell-' + i; c.innerText = i;
             c.onclick = () => {
                 if(isDrawing) return;
-                if(c.classList.contains('selected')) {
-                    c.classList.remove('selected');
-                    selected = selected.filter(n => n !== i);
-                } else if(selected.length < 10) {
-                    c.classList.add('selected');
-                    selected.push(i);
-                }
+                if(c.classList.contains('selected')) { c.classList.remove('selected'); selected = selected.filter(n => n !== i); }
+                else if(selected.length < 10) { c.classList.add('selected'); selected.push(i); }
             };
             grid.appendChild(c);
         }
     }
 
     async function buyTicket() {
-        if(selected.length === 0) return alert("እባክዎ ቁጥሮች ይምረጡ");
-        if(user.balance < stake) return alert("በቂ ባላንስ የሎትም");
-        if(isDrawing) return alert("እጣ እየወጣ ነው...");
-
+        if(selected.length === 0 || user.balance < stake || isDrawing) return alert("መረጃ ያረጋግጡ");
         const newBal = user.balance - stake;
-        
-        // ዳታቤዝ ላይ ባላንስ መቀነስ
-        const { error: balErr } = await supabaseClient
-            .from('users')
-            .update({ balance: newBal })
-            .eq('phone', user.phone);
-        
+        const { error: balErr } = await supabaseClient.from('users').update({ balance: newBal }).eq('phone', user.phone);
         if(!balErr) {
-            // ትኬቱን መመዝገብ
-            const { error: ticketErr } = await supabaseClient
-                .from('tickets')
-                .insert([{ 
-                    user_phone: user.phone, 
-                    selected_numbers: selected, 
-                    stake_amount: stake 
-                }]);
-            
+            const { error: ticketErr } = await supabaseClient.from('tickets').insert([{ user_phone: user.phone, selected_numbers: selected, stake_amount: stake }]);
             if(!ticketErr) {
-                user.balance = newBal;
-                updateBalanceUI();
+                user.balance = newBal; updateBalanceUI();
                 activeTickets.push({ nums: [...selected], amt: stake, won: 0 });
-                renderTickets();
-                clearGrid();
+                renderTickets(); clearGrid();
             }
         }
     }
@@ -199,47 +150,26 @@
         const list = document.getElementById('ticket-list');
         list.innerHTML = activeTickets.map(t => {
             const hits = t.nums.filter(n => drawn.includes(n)).length;
-            return `
-                <div class="ticket-card">
-                    <div>ቁጥሮች: ${t.nums.map(n => `<span style="color:${drawn.includes(n)?'#2ecc71':'white'}">${n}</span>`).join(', ')}</div>
-                    <div style="font-size:11px; color:#888; margin-top:5px;">
-                        መጠን: ${t.amt} ETB | Hits: ${hits} ${t.won > 0 ? '| Win: <b style="color:#ffd700">'+t.won+'</b>' : ''}
-                    </div>
-                </div>
-            `;
+            return `<div class="ticket-card"><div>ቁጥሮች: ${t.nums.map(n => `<span style="color:${drawn.includes(n)?'#2ecc71':'white'}">${n}</span>`).join(', ')}</div><div style="font-size:11px; color:#888;">Hits: ${hits} ${t.won > 0 ? '| Win: '+t.won : ''}</div></div>`;
         }).join('');
     }
 
     function tick() {
         if(isDrawing) return;
-        timeLeft--;
-        if(timeLeft <= 0) runDraw();
+        timeLeft--; if(timeLeft <= 0) runDraw();
         document.getElementById('timer-display').innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
     }
 
     function runDraw() {
-        isDrawing = true;
-        let drawn = [];
-        document.getElementById('top-display').innerHTML = "";
-
+        isDrawing = true; let drawn = [];
         const itv = setInterval(() => {
             let n = Math.floor(Math.random()*80)+1;
             while(drawn.includes(n)) n = Math.floor(Math.random()*80)+1;
             drawn.push(n);
-            
-            const ball = document.createElement('div');
-            ball.className = 'ball drawn-ball';
-            ball.innerText = n;
+            const ball = document.createElement('div'); ball.className = 'ball drawn-ball'; ball.innerText = n;
             document.getElementById('top-display').appendChild(ball);
-
-            // በግሪዱ ላይ ምልክት ማድረግ
-            const cell = document.getElementById('cell-' + n);
-            if(cell) cell.classList.add('hit');
-
-            if(drawn.length >= 20) {
-                clearInterval(itv);
-                setTimeout(() => calculateFinal(drawn), 1000);
-            }
+            const cell = document.getElementById('cell-' + n); if(cell) cell.classList.add('hit');
+            if(drawn.length >= 20) { clearInterval(itv); calculateFinal(drawn); }
         }, 300);
     }
 
@@ -247,42 +177,19 @@
         let totalWin = 0;
         activeTickets.forEach(t => {
             const hits = t.nums.filter(n => drawn.includes(n)).length;
-            // የአሸናፊነት ህግ (ለምሳሌ 3 እና ከዚያ በላይ ሲያገኝ)
-            if(hits >= 3) { 
-                t.won = t.amt * (hits - 1); 
-                totalWin += t.won;
-            }
+            if(hits >= 3) { t.won = t.amt * (hits - 1); totalWin += t.won; }
         });
-
         if(totalWin > 0) {
             user.balance += totalWin;
             await supabaseClient.from('users').update({ balance: user.balance }).eq('phone', user.phone);
-            updateBalanceUI();
-            alert("እንኳን ደስ አለዎት! " + totalWin + " ETB አሸንፈዋል!");
+            updateBalanceUI(); alert("እንኳን ደስ አለዎት! " + totalWin + " ETB አሸንፈዋል!");
         }
-
         renderTickets(drawn);
-
-        // ለቀጣይ ዙር ማጽዳት
-        setTimeout(() => {
-            activeTickets = []; 
-            timeLeft = 60; 
-            isDrawing = false;
-            document.getElementById('top-display').innerHTML = "";
-            document.querySelectorAll('.cell').forEach(c => c.classList.remove('hit'));
-            renderTickets();
-        }, 7000);
+        setTimeout(() => { activeTickets = []; timeLeft = 60; isDrawing = false; document.getElementById('top-display').innerHTML = ""; document.querySelectorAll('.cell').forEach(c => c.classList.remove('hit')); renderTickets(); }, 7000);
     }
 
-    function updateBalanceUI() { 
-        document.getElementById('u-balance').innerText = user.balance.toFixed(2) + " ETB"; 
-    }
-
-    function clearGrid() { 
-        selected = []; 
-        document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected')); 
-    }
-
+    function updateBalanceUI() { document.getElementById('u-balance').innerText = user.balance.toFixed(2) + " ETB"; }
+    function clearGrid() { selected = []; document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected')); }
 </script>
 </body>
 </html>
