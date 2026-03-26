@@ -9,7 +9,6 @@
         :root { --bg: #06090f; --card: #111621; --accent: #ffd700; --blue: #007bff; --green: #2ecc71; }
         body { font-family: sans-serif; background: radial-gradient(circle, #1a2a44 0%, var(--bg) 100%); color: white; margin: 0; user-select: none; }
         
-        /* Auth Screen */
         .auth-container { position: fixed; inset: 0; background: rgba(0,0,0,0.9); z-index: 10000; display: flex; align-items: center; justify-content: center; }
         .auth-card { background: var(--card); padding: 30px; border-radius: 20px; width: 300px; text-align: center; border: 1px solid var(--accent); }
         .auth-card input { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #333; background: #000; color: #fff; box-sizing: border-box; }
@@ -59,7 +58,6 @@
     <div id="timer-display" style="text-align:center; font-size:24px; font-weight:bold; padding:10px; color:var(--accent);">00:60</div>
 
     <div class="keno-grid" id="main-grid"></div>
-
     <div id="ticket-list"></div>
 
     <div class="controls">
@@ -72,10 +70,9 @@
 </div>
 
 <script>
-    // ሳም፣ ያንተ መረጃ እዚህ ጋር ገብቷል
+    // ሳም፣ ያንተ መረጃዎች እዚህ ጋር ገብተዋል
     const SUPABASE_URL = 'https://mvfovqztomzbvhvauxc.supabase.co'; 
-    // ከታች ባለው ኮቴ ውስጥ የ 'anon public' keyህን አስገባ
-    const SUPABASE_KEY = 'sb_publishable_12xn0';
+    const SUPABASE_KEY = 'sb_publishable_12xn0x6_jG9f6vY_GjL-6vL-6vL-6vL-6vL-6vL'; // ይህ የናሙና ቁልፍ ነው፣ በፎቶው ላይ ያየኸውን ሙሉውን እዚህ ተካው
     
     const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
