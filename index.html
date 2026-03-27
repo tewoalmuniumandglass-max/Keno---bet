@@ -82,20 +82,38 @@
         document.getElementById('auth-title').innerText = isLogin ? "LOGIN" : "REGISTER";
     }
 
-    async function handleAuth() {
-        const email = document.getElementById('email').value;
-        const pass = document.getElementById('pass').value;
+    // --- በስልክ ቁጥር ለመግባት የተስተካከለ ኮድ ---
+async function handleAuth() {
+    const phone = document.getElementById('phone').value; // ከኢሜል ወደ ስልክ ቀየርነው
+    const pass = document.getElementById('pass').value;
 
-        if (isLogin) {
-            const { data, error } = await supabase.auth.signInWithPassword({ email, password: pass });
-            if (error) alert(error.message);
-            else checkSession();
-        } else {
-            const { data, error } = await supabase.auth.signUp({ email, password: pass });
-            if (error) alert(error.message);
-            else alert("ምዝገባ ተሳክቷል! ኢሜልዎን ያረጋግጡ ወይም ይግቡ።");
-        }
+    if (!phone || phone.length < 10) return alert("ትክክለኛ ስልክ ቁጥር ያስገቡ!");
+
+    // ስልክ ቁጥሩን ወደ ኢሜል ፎርማት እንቀይረዋለን (ለምሳሌ 0911... -> 0911...@keno.com)
+    const fakeEmail = `${phone}@keno.com`;
+
+    if (isLogin) {
+        // መግቢያ (Login)
+        const { data, error } = await supabase.auth.signInWithPassword({ 
+            email: fakeEmail, 
+            password: pass 
+        });
+        if (error) alert("ስልክ ወይም ፓስወርድ ተሳስቷል!");
+        else checkSession();
+    } else {
+        // ምዝገባ (Register)
+        const { data, error } = await supabase.auth.signUp({ 
+            email: fakeEmail, 
+            password: pass,
+            options: {
+                data: { phone: phone } // ስልኩን በዳታቤዝ ውስጥ ለብቻውም እናስቀምጠዋለን
+            }
+        });
+        if (error) alert(error.message);
+        else alert("ምዝገባ ተሳክቷል! አሁን መግባት ይችላሉ።");
     }
+}
+
 
     async function checkSession() {
         const { data: { session } } = await supabase.auth.getSession();
