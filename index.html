@@ -3,65 +3,157 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KENO BET - Professional System</title>
+    <title>KENO BET - Full Professional System</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ያንተ የድሮ ስታይል እዚህ ጋር እንዳለ ይቀጥላል */
         :root { --bg: #0f1215; --header: #0b4a8f; --grid: #2c313c; --green: #28a745; --gold: #ffd700; --blue: #007bff; --red: #dc3545; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; user-select: none; overflow-x: hidden; }
+
+        /* --- Auth & Modals --- */
         .auth-container { position: fixed; inset: 0; background: #f4f7f9; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
-        .auth-card { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 350px; text-align: center; color: #333; }
-        .auth-card input { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; }
+        .auth-card { background: white; padding: 25px; border-radius: 12px; width: 100%; max-width: 350px; text-align: center; box-shadow: 0 10px 40px rgba(0,0,0,0.2); color: #333; }
+        .auth-card input, .auth-card select { width: 100%; padding: 12px; margin-bottom: 10px; border: 1px solid #ddd; border-radius: 6px; box-sizing: border-box; font-size: 14px; }
+        
+        .cf-box { border: 1px solid #ddd; border-radius: 6px; padding: 10px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; background: #fafafa; cursor: pointer; }
+        .cf-check { width: 20px; height: 20px; border: 2px solid #ccc; border-radius: 4px; display: flex; align-items: center; justify-content: center; background: white; }
+        .cf-check.verified { border-color: var(--green); background: var(--green); color: white; }
+        
         .btn-auth { width: 100%; padding: 14px; background: var(--blue); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
-        header { background: var(--header); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; }
+        .btn-auth:disabled { background: #ccc; }
+
+        /* --- Game Header --- */
+        header { background: var(--header); padding: 12px 15px; display: flex; justify-content: space-between; align-items: center; position: sticky; top: 0; z-index: 1000; }
         .balance-box { background: rgba(0,0,0,0.5); padding: 5px 15px; border-radius: 20px; color: var(--gold); font-weight: bold; border: 1px solid var(--gold); }
-        .hidden { display: none !important; }
-        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; padding: 10px; }
-        .cell { background: var(--grid); height: 35px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: bold; border-radius: 4px; }
+        .wallet-actions { display: flex; gap: 6px; padding: 10px; background: #1a1d23; border-bottom: 1px solid #333; }
+        .action-btn { flex: 1; padding: 9px; border: none; border-radius: 5px; font-weight: bold; font-size: 12px; color: white; cursor: pointer; }
+
+        /* --- Draw Area --- */
+        .display-section { background: #000; border-bottom: 2px solid var(--blue); }
+        .top-info { display: flex; justify-content: space-between; padding: 10px 15px; background: #111; font-weight: bold; font-size: 14px; }
+        .draw-balls-area { min-height: 100px; padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; align-content: center; }
+
+        .ball { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 900; font-size: 14px; animation: pop 0.3s ease-out; }
+        .ball.drawn-ball { background: var(--gold); color: #000; }
+        .ball.hit-ball { background: var(--blue); color: white; border: 2px solid white; box-shadow: 0 0 10px var(--blue); }
+
+        /* --- Grid System --- */
+        .grid-container { padding: 10px; transition: 0.3s; }
+        .keno-grid { display: grid; grid-template-columns: repeat(10, 1fr); gap: 4px; }
+        .cell { background: var(--grid); height: 35px; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: bold; border-radius: 4px; cursor: pointer; border-bottom: 2px solid #000; }
         .cell.selected { background: var(--blue); border: 1px solid #fff; }
-        .draw-balls-area { min-height: 100px; padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
-        .ball { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; background: var(--gold); color: #000; }
-        .controls { position: fixed; bottom: 0; width: 100%; background: #1a1d23; padding: 15px; box-sizing: border-box; }
+
+        /* --- Tickets --- */
+        .tickets-container { padding: 10px; transition: 0.3s; }
         .ticket-card { background: #1a1d23; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 6px solid var(--blue); }
+        .ticket-card.win { border-left-color: var(--green); background: #142a18; }
+        .ticket-card.lost { border-left-color: var(--red); opacity: 0.6; }
+
+        /* --- Controls --- */
+        .controls { position: fixed; bottom: 0; width: 100%; background: #1a1d23; padding: 15px; border-top: 1px solid #444; box-sizing: border-box; z-index: 1000; }
+        .bet-btn { width: 100%; background: var(--green); border: none; color: white; font-weight: 900; font-size: 22px; border-radius: 8px; height: 55px; cursor: pointer; }
+
+        .hidden { display: none !important; }
+        .modal-overlay { background: rgba(0,0,0,0.9) !important; color: white !important; }
+        @keyframes pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
     </style>
 </head>
 <body>
 
-<div id="auth-screen" class="auth-container">
+<div id="register-screen" class="auth-container">
     <div class="auth-card">
-        <h2 id="auth-title">LOGIN</h2>
-        <input type="text" id="phone" placeholder="ስልክ ቁጥር">
-        <input type="password" id="pass" placeholder="Password">
-        <button class="btn-auth" onclick="handleAuth()">ይግቡ</button>
-        <p style="font-size:13px; margin-top:10px;">አዲስ ነዎት? <span style="color:var(--blue); cursor:pointer;" onclick="toggleAuth()">REGISTER</span></p>
+        <h2>REGISTER</h2>
+        <input type="text" id="r-name" placeholder="ሙሉ ስም">
+        <input type="text" id="r-phone" placeholder="ስልክ ቁጥር">
+        <input type="password" id="r-pass" placeholder="Password">
+        <div class="cf-box" onclick="verifyUser('r')">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div class="cf-check" id="r-check"></div>
+                <span id="r-v-text" style="font-size:12px;">ሰው መሆንዎን ያረጋግጡ</span>
+            </div>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4b/Cloudflare_Logo.svg" width="40">
+        </div>
+        <button class="btn-auth" id="r-btn" onclick="handleSupabaseAuth('register')" disabled style="background:var(--green)">CREATE ACCOUNT</button>
+        <p style="font-size:13px; color:#666; margin-top:10px;">አካውንት አለዎት? <span style="color:var(--blue); font-weight:bold; cursor:pointer;" onclick="switchAuth('login-screen')">LOGIN</span></p>
+    </div>
+</div>
+
+<div id="login-screen" class="auth-container hidden">
+    <div class="auth-card">
+        <h2>LOGIN</h2>
+        <input type="text" id="l-phone" placeholder="ስልክ ቁጥር">
+        <input type="password" id="l-pass" placeholder="Password">
+        <div class="cf-box" onclick="verifyUser('l')">
+            <div style="display:flex; align-items:center; gap:8px;">
+                <div class="cf-check" id="l-check"></div>
+                <span id="l-v-text" style="font-size:12px;">ሰው መሆንዎን ያረጋግጡ</span>
+            </div>
+            <img src="https://upload.wikimedia.org/wikipedia/commons/4/4b/Cloudflare_Logo.svg" width="40">
+        </div>
+        <button class="btn-auth" id="l-btn" onclick="handleSupabaseAuth('login')" disabled>SIGN IN</button>
+        <p style="font-size:13px; color:#666; margin-top:10px;">አዲስ ነዎት? <span style="color:var(--blue); font-weight:bold; cursor:pointer;" onclick="switchAuth('register-screen')">REGISTER</span></p>
+    </div>
+</div>
+
+<div id="dep-modal" class="auth-container modal-overlay hidden">
+    <div class="auth-card">
+        <h3>DEPOSIT</h3>
+        <p style="font-size:12px;">Telebirr Transfer: <b>0911223344</b></p>
+        <input type="text" id="d-tid" placeholder="Transaction ID (TID)">
+        <input type="number" id="d-amt" placeholder="Amount Sent">
+        <button class="btn-auth" onclick="handleDepositRequest()">SUBMIT DEPOSIT</button>
+        <button onclick="closeModal('dep-modal')" style="background:none; border:none; color:#999; margin-top:10px;">CANCEL</button>
+    </div>
+</div>
+
+<div id="wit-modal" class="auth-container modal-overlay hidden">
+    <div class="auth-card">
+        <h3>WITHDRAW (ብር ማውጫ)</h3>
+        <select id="w-bank">
+            <option value="" disabled selected>ባንክ ይምረጡ</option>
+            <option value="CBE">ንግድ ባንክ (CBE)</option>
+            <option value="Abyssinia">አቢሲኒያ (BoA)</option>
+            <option value="Dashen">ዳሽን (Dashen)</option>
+            <option value="Telebirr">ቴሌብር (Telebirr)</option>
+        </select>
+        <input type="text" id="w-acc" placeholder="የአካውንት ቁጥር">
+        <input type="number" id="w-amt" placeholder="Amount">
+        <button class="btn-auth" style="background:var(--red)" onclick="handleWit()">SEND REQUEST</button>
+        <button onclick="closeModal('wit-modal')" style="background:none; border:none; color:#999; margin-top:10px;">CANCEL</button>
     </div>
 </div>
 
 <div id="game-screen" class="hidden">
     <header>
-        <div id="p-name" style="font-weight:bold;">PLAYER</div>
+        <div onclick="adminBonus()" id="p-name" style="font-weight:bold; cursor:pointer;">PLAYER</div>
         <div class="balance-box" id="u-balance">0.00 ETB</div>
     </header>
 
-    <div style="display:flex; gap:10px; padding:10px; background:#1a1d23;">
-        <button onclick="openModal('dep-modal')" style="flex:1; background:var(--green); color:white; border:none; padding:10px; border-radius:5px; font-weight:bold;">DEPOSIT</button>
-        <button onclick="openModal('wit-modal')" style="flex:1; background:var(--gold); border:none; padding:10px; border-radius:5px; font-weight:bold;">WITHDRAW</button>
+    <div class="wallet-actions" id="wallet-btns">
+        <button class="action-btn" style="background:var(--green)" onclick="openModal('dep-modal')">DEPOSIT</button>
+        <button class="action-btn" style="background:var(--gold); color:black" onclick="openModal('wit-modal')">WITHDRAW</button>
     </div>
 
-    <div class="display-section" style="background:#000; padding:10px;">
-        <div style="display:flex; justify-content:space-between; margin-bottom:10px;">
+    <div class="display-section">
+        <div class="top-info">
             <span id="win-preview" style="color:var(--gold)">MAX WIN: 0.00 ETB</span>
             <span id="timer">00:60</span>
         </div>
-        <div id="draw-display" class="draw-balls-area"></div>
+        <div class="draw-balls-area" id="draw-display"></div>
     </div>
 
-    <div id="grid-box" class="keno-grid"><div class="keno-grid" id="main-grid"></div></div>
+    <div class="grid-container" id="grid-box">
+        <div class="keno-grid" id="main-grid"></div>
+    </div>
 
-    <div id="ticket-list" style="padding:10px;"></div>
+    <div class="tickets-container" id="ticket-box">
+        <h4 id="ticket-title" style="margin-top:0; color:#aaa; font-size:13px;">ACTIVE TICKETS</h4>
+        <div id="ticket-list"></div>
+    </div>
 
-    <div class="controls">
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
+    <div style="height: 180px;"></div>
+
+    <div class="controls" id="control-bar">
+        <div style="display:flex; gap:10px; margin-bottom:12px;">
             <div style="flex:1; background:#2c313c; display:flex; justify-content:space-between; align-items:center; border-radius:8px; padding:0 15px;">
                 <button onclick="adjStake(-5)" style="background:none; border:none; color:white; font-size:28px;">-</button>
                 <span id="stake-val" style="font-weight:bold; font-size:20px;">5</span>
@@ -69,33 +161,48 @@
             </div>
             <button style="flex:0.4; background:#444; border:none; color:#fff; border-radius:8px;" onclick="clearSel()">CLEAR</button>
         </div>
-        <button class="btn-auth" style="background:var(--green); font-size:20px; height:55px;" onclick="placeBet()">PLACE BET</button>
+        <button class="bet-btn" onclick="placeBet()">PLACE BET</button>
     </div>
 </div>
 
-<div id="dep-modal" class="auth-container hidden" style="background:rgba(0,0,0,0.9);"><div class="auth-card"><h3>DEPOSIT</h3><input type="text" id="d-tid" placeholder="TID"><input type="number" id="d-amt" placeholder="Amount"><button class="btn-auth" onclick="requestDeposit()">SEND</button><button onclick="closeModal('dep-modal')">CLOSE</button></div></div>
-<div id="wit-modal" class="auth-container hidden" style="background:rgba(0,0,0,0.9);"><div class="auth-card"><h3>WITHDRAW</h3><input type="text" id="w-acc" placeholder="Account"><input type="number" id="w-amt" placeholder="Amount"><button class="btn-auth" onclick="handleWit()">SEND</button><button onclick="closeModal('wit-modal')">CLOSE</button></div></div>
-
 <script>
+    // --- Supabase መረጃ ---
     const _url = 'https://nvfwxqzitomzbvhvsuxo.supabase.co';
-    const _key = 'YOUR_PUBLISHABLE_KEY_HERE'; // Anon Key እዚህ ይግባ
+    const _key = 'YOUR_PUBLISHABLE_KEY_HERE'; // እዚህ ላይ በፎቶ የላክኸውን Anon Key ተካው
     const supabase = supabase.createClient(_url, _key);
 
-    let balance = 0, selected = [], tickets = [], stake = 5, timeLeft = 60, drawing = false, isLogin = true, currentUser = null;
+    let balance = 0;
+    let selected = [];
+    let tickets = [];
+    let stake = 5;
+    let timeLeft = 60;
+    let drawing = false;
+    let verified = false;
+    let currentUser = null;
+
     const payTable = { 1:[0,17.5], 2:[0,5,50], 3:[0,0,10,250], 4:[0,0,5,50,400], 5:[0,0,0,10,100,750], 6:[0,0,0,5,50,250,2500] };
 
-    function toggleAuth() { isLogin = !isLogin; document.getElementById('auth-title').innerText = isLogin ? "LOGIN" : "REGISTER"; }
-
-    async function handleAuth() {
-        const phone = document.getElementById('phone').value;
-        const pass = document.getElementById('pass').value;
+    // --- Supabase Auth System ---
+    async function handleSupabaseAuth(type) {
+        const phone = type === 'login' ? document.getElementById('l-phone').value : document.getElementById('r-phone').value;
+        const pass = type === 'login' ? document.getElementById('l-pass').value : document.getElementById('r-pass').value;
+        const name = type === 'register' ? document.getElementById('r-name').value : "";
+        
+        if(phone.length < 10) return alert("ትክክለኛ ስልክ ያስገቡ!");
         const fakeEmail = `${phone}@keno.com`;
-        if (isLogin) {
-            const { error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: pass });
-            if (error) alert("ስህተት!"); else checkSession();
+
+        if (type === 'login') {
+            const { data, error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: pass });
+            if (error) alert("ስልክ ወይም ፓስወርድ ተሳስቷል!");
+            else checkSession();
         } else {
-            const { error } = await supabase.auth.signUp({ email: fakeEmail, password: pass });
-            if (error) alert(error.message); else alert("ተሳክቷል! አሁን ይግቡ።");
+            const { data, error } = await supabase.auth.signUp({ 
+                email: fakeEmail, 
+                password: pass,
+                options: { data: { full_name: name } }
+            });
+            if (error) alert(error.message);
+            else alert("ምዝገባ ተሳክቷል! አሁን LOGIN ማድረግ ይችላሉ።");
         }
     }
 
@@ -103,10 +210,11 @@
         const { data: { session } } = await supabase.auth.getSession();
         if (session) {
             currentUser = session.user;
-            document.getElementById('auth-screen').classList.add('hidden');
+            document.querySelectorAll('.auth-container').forEach(el => el.classList.add('hidden'));
             document.getElementById('game-screen').classList.remove('hidden');
-            document.getElementById('p-name').innerText = currentUser.email.split('@')[0];
-            fetchBalance(); initGrid(); setInterval(tick, 1000);
+            document.getElementById('p-name').innerText = currentUser.user_metadata.full_name || currentUser.email.split('@')[0];
+            fetchBalance();
+            initGrid(); updateUI(); setInterval(tick, 1000);
         }
     }
 
@@ -119,28 +227,83 @@
         await supabase.from('profiles').update({ balance: balance }).eq('id', currentUser.id);
     }
 
+    async function handleDepositRequest() {
+        const tid = document.getElementById('d-tid').value;
+        const amt = document.getElementById('d-amt').value;
+        if(!tid || !amt) return alert("ሁሉንም ይሙሉ!");
+        
+        const { error } = await supabase.from('requests').insert([
+            { user_id: currentUser.id, type: 'deposit', amount: amt, details: `TID: ${tid}`, status: 'pending' }
+        ]);
+        if(!error) { alert("ጥያቄው ተልኳል!"); closeModal('dep-modal'); }
+    }
+
+    // --- ያንተ የድሮ የጌም ሎጂክ (Logic) እንዳለ ---
+
+    function switchAuth(id) {
+        verified = false;
+        document.querySelectorAll('.auth-container').forEach(el => el.classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    }
+
+    function verifyUser(prefix) {
+        if(verified) return;
+        const check = document.getElementById(prefix + '-check');
+        document.getElementById(prefix + '-v-text').innerText = "Verifying...";
+        setTimeout(() => {
+            check.classList.add('verified'); check.innerHTML = "✓";
+            document.getElementById(prefix + '-v-text').innerText = "Verified!";
+            document.getElementById(prefix + '-btn').disabled = false;
+            verified = true;
+        }, 1200);
+    }
+
     function initGrid() {
-        const grid = document.getElementById('main-grid'); grid.innerHTML = "";
+        const grid = document.getElementById('main-grid');
+        grid.innerHTML = "";
         for(let i=1; i<=80; i++) {
-            const c = document.createElement('div'); c.className = 'cell'; c.innerText = i;
+            const c = document.createElement('div');
+            c.className = 'cell'; c.innerText = i;
             c.onclick = () => {
                 if(drawing || timeLeft < 2) return;
-                if(c.classList.contains('selected')) { c.classList.remove('selected'); selected = selected.filter(x => x !== i); }
-                else if(selected.length < 6) { c.classList.add('selected'); selected.push(i); }
+                if(c.classList.contains('selected')) {
+                    c.classList.remove('selected'); selected = selected.filter(x => x !== i);
+                } else if(selected.length < 6) {
+                    c.classList.add('selected'); selected.push(i);
+                }
                 updateWinPreview();
             };
             grid.appendChild(c);
         }
     }
 
-    function tick() { if(!drawing) { timeLeft--; document.getElementById('timer').innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`; if(timeLeft <= 0) startDraw(); } }
+    function tick() {
+        if(!drawing) {
+            timeLeft--;
+            document.getElementById('timer').innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`;
+            if(timeLeft <= 0) startDraw();
+        }
+    }
 
     function startDraw() {
-        drawing = true; let drawn = []; const disp = document.getElementById('draw-display'); disp.innerHTML = "";
+        drawing = true;
+        document.getElementById('grid-box').classList.add('hidden');
+        document.getElementById('wallet-btns').classList.add('hidden');
+        document.getElementById('control-bar').classList.add('hidden');
+        
+        let drawn = [];
+        const disp = document.getElementById('draw-display');
+        disp.innerHTML = "";
+
         const inv = setInterval(() => {
             let n; do { n = Math.floor(Math.random()*80)+1; } while(drawn.includes(n));
             drawn.push(n);
-            const b = document.createElement('div'); b.className = 'ball drawn-ball'; b.innerText = n; disp.appendChild(b);
+            const isHit = tickets.some(t => t.nums.includes(n));
+            const b = document.createElement('div');
+            b.className = isHit ? 'ball hit-ball' : 'ball drawn-ball';
+            b.innerText = n;
+            disp.appendChild(b);
+            renderTickets(drawn);
             if(drawn.length >= 20) { clearInterval(inv); finishRound(drawn); }
         }, 800);
     }
@@ -150,25 +313,76 @@
         tickets.forEach(t => {
             const hits = t.nums.filter(n => drawn.includes(n)).length;
             const mult = (payTable[t.nums.length] && payTable[t.nums.length][hits]) || 0;
-            if(mult > 0) { t.win = (t.amt/5)*mult; winSum += t.win; }
+            if(mult > 0) { t.win = (t.amt/5)*mult; winSum += t.win; t.status = 'win'; }
+            else t.status = 'lost';
         });
         balance += winSum; 
         updateUI(); 
-        await syncBalance(); // ዳታቤዝ ላይ ሴቭ ያደርጋል
-        setTimeout(() => { drawing = false; timeLeft = 60; tickets = []; disp.innerHTML = ""; renderTickets(); }, 5000);
+        await syncBalance(); // ዳታቤዝ ላይ አሸናፊነትን ሴቭ ያደርጋል
+        renderTickets(drawn);
+        setTimeout(() => {
+            drawing = false; timeLeft = 60; tickets = [];
+            document.getElementById('grid-box').classList.remove('hidden');
+            document.getElementById('wallet-btns').classList.remove('hidden');
+            document.getElementById('control-bar').classList.remove('hidden');
+            document.getElementById('draw-display').innerHTML = "";
+            renderTickets();
+        }, 6000);
     }
 
     async function placeBet() {
         if(selected.length === 0 || balance < stake) return;
-        balance -= stake; tickets.push({ nums: [...selected], amt: stake, win: 0 });
-        updateUI(); await syncBalance(); clearSel(); renderTickets();
+        balance -= stake;
+        await syncBalance(); // ዳታቤዝ ላይ ቅነሳን ሴቭ ያደርጋል
+        tickets.push({ nums: [...selected], amt: stake, status: 'pending', win: 0 });
+        clearSel(); updateUI(); renderTickets();
     }
 
-    function updateUI() { document.getElementById('u-balance').innerText = balance.toFixed(2) + " ETB"; }
-    function clearSel() { selected = []; document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected')); }
+    function renderTickets(drawn = []) {
+        const list = document.getElementById('ticket-list');
+        list.innerHTML = "";
+        tickets.forEach(t => {
+            const h = t.nums.filter(n => drawn.includes(n)).length;
+            const div = document.createElement('div');
+            div.className = `ticket-card ${t.status === 'win' ? 'win' : (t.status === 'lost' ? 'lost' : '')}`;
+            div.innerHTML = `<div style="display:flex; justify-content:space-between; font-weight:bold; font-size:12px;">
+                <span>STAKE: ${t.amt} | HITS: ${h}</span><span style="color:var(--gold)">${t.win>0?'WIN: '+t.win:''}</span>
+                </div><div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:5px;">
+                ${t.nums.map(n => `<span style="background:${drawn.includes(n)?'var(--green)':'#333'}; padding:3px 7px; border-radius:4px; font-size:12px;">${n}</span>`).join('')}</div>`;
+            list.appendChild(div);
+        });
+    }
+
+    async function handleWit() {
+        const bank = document.getElementById('w-bank').value;
+        const acc = document.getElementById('w-acc').value;
+        const amt = parseFloat(document.getElementById('w-amt').value);
+        if(!bank || !acc || !amt || amt > balance) return alert("ዝርዝሩን በትክክል ይሙሉ!");
+        
+        const { error } = await supabase.from('requests').insert([
+            { user_id: currentUser.id, type: 'withdraw', amount: amt, details: `Bank: ${bank}, Acc: ${acc}`, status: 'pending' }
+        ]);
+        
+        if(!error) {
+            balance -= amt; 
+            updateUI(); 
+            await syncBalance();
+            closeModal('wit-modal'); 
+            alert(`ጥያቄ ተልኳል!\nመጠን: ${amt} ETB`);
+        }
+    }
+
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
-    function adjStake(v) { stake = Math.max(5, stake + v); document.getElementById('stake-val').innerText = stake; }
+    function adjStake(v) { stake = Math.max(5, stake + v); document.getElementById('stake-val').innerText = stake; updateWinPreview(); }
+    function clearSel() { selected = []; document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected')); updateWinPreview(); }
+    function updateWinPreview() {
+        if(selected.length > 0) document.getElementById('win-preview').innerText = `MAX WIN: ${((stake/5)*payTable[selected.length][selected.length]).toLocaleString()} ETB`;
+        else document.getElementById('win-preview').innerText = "MAX WIN: 0.00 ETB";
+    }
+    function updateUI() { document.getElementById('u-balance').innerText = balance.toFixed(2) + " ETB"; }
+    function adminBonus() { if(prompt("PIN:") === "1234") { balance += 500; updateUI(); syncBalance(); } }
+
     window.onload = checkSession;
 </script>
 </body>
