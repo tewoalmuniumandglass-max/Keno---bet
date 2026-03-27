@@ -3,10 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>KENO BET - Professional Supabase System</title>
+    <title>KENO BET - Professional System</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        /* ያንተ የድሮ ስታይል እዚህ ጋር ይቀጥላል... (ለአጭር እንዲሆን አልደገምኩትም) */
+        /* ያንተ የድሮ ስታይል እዚህ ጋር እንዳለ ይቀጥላል */
         :root { --bg: #0f1215; --header: #0b4a8f; --grid: #2c313c; --green: #28a745; --gold: #ffd700; --blue: #007bff; --red: #dc3545; }
         body { font-family: 'Segoe UI', sans-serif; background: var(--bg); color: white; margin: 0; user-select: none; overflow-x: hidden; }
         .auth-container { position: fixed; inset: 0; background: #f4f7f9; z-index: 10000; display: flex; align-items: center; justify-content: center; padding: 20px; }
@@ -22,6 +22,7 @@
         .draw-balls-area { min-height: 100px; padding: 10px; display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
         .ball { width: 34px; height: 34px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; background: var(--gold); color: #000; }
         .controls { position: fixed; bottom: 0; width: 100%; background: #1a1d23; padding: 15px; box-sizing: border-box; }
+        .ticket-card { background: #1a1d23; border-radius: 8px; padding: 12px; margin-bottom: 10px; border-left: 6px solid var(--blue); }
     </style>
 </head>
 <body>
@@ -29,7 +30,7 @@
 <div id="auth-screen" class="auth-container">
     <div class="auth-card">
         <h2 id="auth-title">LOGIN</h2>
-        <input type="text" id="phone" placeholder="ስልክ ቁጥር (ለምሳሌ 0912...)">
+        <input type="text" id="phone" placeholder="ስልክ ቁጥር">
         <input type="password" id="pass" placeholder="Password">
         <button class="btn-auth" onclick="handleAuth()">ይግቡ</button>
         <p style="font-size:13px; margin-top:10px;">አዲስ ነዎት? <span style="color:var(--blue); cursor:pointer;" onclick="toggleAuth()">REGISTER</span></p>
@@ -55,7 +56,9 @@
         <div id="draw-display" class="draw-balls-area"></div>
     </div>
 
-    <div id="grid-box" class="keno-grid"></div>
+    <div id="grid-box" class="keno-grid"><div class="keno-grid" id="main-grid"></div></div>
+
+    <div id="ticket-list" style="padding:10px;"></div>
 
     <div class="controls">
         <div style="display:flex; gap:10px; margin-bottom:10px;">
@@ -64,57 +67,35 @@
                 <span id="stake-val" style="font-weight:bold; font-size:20px;">5</span>
                 <button onclick="adjStake(5)" style="background:none; border:none; color:white; font-size:28px;">+</button>
             </div>
+            <button style="flex:0.4; background:#444; border:none; color:#fff; border-radius:8px;" onclick="clearSel()">CLEAR</button>
         </div>
         <button class="btn-auth" style="background:var(--green); font-size:20px; height:55px;" onclick="placeBet()">PLACE BET</button>
     </div>
 </div>
 
-<div id="dep-modal" class="auth-container hidden" style="background:rgba(0,0,0,0.9);">
-    <div class="auth-card">
-        <h3>DEPOSIT</h3>
-        <p style="font-size:12px;">Telebirr: <b>0911223344</b></p>
-        <input type="text" id="d-tid" placeholder="Transaction ID (TID)">
-        <input type="number" id="d-amt" placeholder="Amount">
-        <button class="btn-auth" onclick="requestDeposit()">ጥያቄ ላክ</button>
-        <button onclick="closeModal('dep-modal')" style="background:none; border:none; color:gray; margin-top:10px;">CLOSE</button>
-    </div>
-</div>
+<div id="dep-modal" class="auth-container hidden" style="background:rgba(0,0,0,0.9);"><div class="auth-card"><h3>DEPOSIT</h3><input type="text" id="d-tid" placeholder="TID"><input type="number" id="d-amt" placeholder="Amount"><button class="btn-auth" onclick="requestDeposit()">SEND</button><button onclick="closeModal('dep-modal')">CLOSE</button></div></div>
+<div id="wit-modal" class="auth-container hidden" style="background:rgba(0,0,0,0.9);"><div class="auth-card"><h3>WITHDRAW</h3><input type="text" id="w-acc" placeholder="Account"><input type="number" id="w-amt" placeholder="Amount"><button class="btn-auth" onclick="handleWit()">SEND</button><button onclick="closeModal('wit-modal')">CLOSE</button></div></div>
 
 <script>
-    // --- Supabase Config ---
     const _url = 'https://nvfwxqzitomzbvhvsuxo.supabase.co';
-    const _key = 'YOUR_PUBLISHABLE_KEY_HERE'; // እዚህ ጋር በፎቶ የላክኸውን Anon Key ተካው
+    const _key = 'YOUR_PUBLISHABLE_KEY_HERE'; // Anon Key እዚህ ይግባ
     const supabase = supabase.createClient(_url, _key);
 
-    let balance = 0;
-    let selected = [];
-    let stake = 5;
-    let timeLeft = 60;
-    let isLogin = true;
-    let currentUser = null;
-
+    let balance = 0, selected = [], tickets = [], stake = 5, timeLeft = 60, drawing = false, isLogin = true, currentUser = null;
     const payTable = { 1:[0,17.5], 2:[0,5,50], 3:[0,0,10,250], 4:[0,0,5,50,400], 5:[0,0,0,10,100,750], 6:[0,0,0,5,50,250,2500] };
 
-    function toggleAuth() {
-        isLogin = !isLogin;
-        document.getElementById('auth-title').innerText = isLogin ? "LOGIN" : "REGISTER";
-    }
+    function toggleAuth() { isLogin = !isLogin; document.getElementById('auth-title').innerText = isLogin ? "LOGIN" : "REGISTER"; }
 
-    // ስልክ ቁጥርን ወደ Fake Email የመቀየሪያ ዘዴ
     async function handleAuth() {
         const phone = document.getElementById('phone').value;
         const pass = document.getElementById('pass').value;
-        if(phone.length < 10) return alert("ትክክለኛ ስልክ ያስገቡ!");
         const fakeEmail = `${phone}@keno.com`;
-
         if (isLogin) {
-            const { data, error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: pass });
-            if (error) alert("ስልክ ወይም ፓስወርድ ተሳስቷል!");
-            else location.reload();
+            const { error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password: pass });
+            if (error) alert("ስህተት!"); else checkSession();
         } else {
-            const { data, error } = await supabase.auth.signUp({ email: fakeEmail, password: pass });
-            if (error) alert(error.message);
-            else alert("ምዝገባ ተሳክቷል! አሁን ይግቡ።");
+            const { error } = await supabase.auth.signUp({ email: fakeEmail, password: pass });
+            if (error) alert(error.message); else alert("ተሳክቷል! አሁን ይግቡ።");
         }
     }
 
@@ -125,51 +106,69 @@
             document.getElementById('auth-screen').classList.add('hidden');
             document.getElementById('game-screen').classList.remove('hidden');
             document.getElementById('p-name').innerText = currentUser.email.split('@')[0];
-            fetchBalance();
-            initGrid();
-            setInterval(tick, 1000);
+            fetchBalance(); initGrid(); setInterval(tick, 1000);
         }
     }
 
     async function fetchBalance() {
         let { data } = await supabase.from('profiles').select('balance').eq('id', currentUser.id).single();
-        if (data) {
-            balance = parseFloat(data.balance);
-            updateUI();
+        if (data) { balance = parseFloat(data.balance); updateUI(); }
+    }
+
+    async function syncBalance() {
+        await supabase.from('profiles').update({ balance: balance }).eq('id', currentUser.id);
+    }
+
+    function initGrid() {
+        const grid = document.getElementById('main-grid'); grid.innerHTML = "";
+        for(let i=1; i<=80; i++) {
+            const c = document.createElement('div'); c.className = 'cell'; c.innerText = i;
+            c.onclick = () => {
+                if(drawing || timeLeft < 2) return;
+                if(c.classList.contains('selected')) { c.classList.remove('selected'); selected = selected.filter(x => x !== i); }
+                else if(selected.length < 6) { c.classList.add('selected'); selected.push(i); }
+                updateWinPreview();
+            };
+            grid.appendChild(c);
         }
     }
 
-    async function updateDBBalance(newBalance) {
-        await supabase.from('profiles').update({ balance: newBalance }).eq('id', currentUser.id);
+    function tick() { if(!drawing) { timeLeft--; document.getElementById('timer').innerText = `00:${timeLeft < 10 ? '0'+timeLeft : timeLeft}`; if(timeLeft <= 0) startDraw(); } }
+
+    function startDraw() {
+        drawing = true; let drawn = []; const disp = document.getElementById('draw-display'); disp.innerHTML = "";
+        const inv = setInterval(() => {
+            let n; do { n = Math.floor(Math.random()*80)+1; } while(drawn.includes(n));
+            drawn.push(n);
+            const b = document.createElement('div'); b.className = 'ball drawn-ball'; b.innerText = n; disp.appendChild(b);
+            if(drawn.length >= 20) { clearInterval(inv); finishRound(drawn); }
+        }, 800);
     }
 
-    async function requestDeposit() {
-        const tid = document.getElementById('d-tid').value;
-        const amt = document.getElementById('d-amt').value;
-        if(!tid || !amt) return;
-
-        const { error } = await supabase.from('requests').insert([
-            { user_id: currentUser.id, type: 'deposit', amount: amt, details: `TID: ${tid}`, status: 'pending' }
-        ]);
-        if (!error) { alert("ጥያቄው ተልኳል!"); closeModal('dep-modal'); }
+    async function finishRound(drawn) {
+        let winSum = 0;
+        tickets.forEach(t => {
+            const hits = t.nums.filter(n => drawn.includes(n)).length;
+            const mult = (payTable[t.nums.length] && payTable[t.nums.length][hits]) || 0;
+            if(mult > 0) { t.win = (t.amt/5)*mult; winSum += t.win; }
+        });
+        balance += winSum; 
+        updateUI(); 
+        await syncBalance(); // ዳታቤዝ ላይ ሴቭ ያደርጋል
+        setTimeout(() => { drawing = false; timeLeft = 60; tickets = []; disp.innerHTML = ""; renderTickets(); }, 5000);
     }
 
-    function placeBet() {
-        if(selected.length === 0 || balance < stake) return alert("ብር የለዎትም ወይም ቁጥር አልመረጡም!");
-        balance -= stake;
-        updateUI();
-        updateDBBalance(balance); // ዳታቤዝ ላይ ቀንስ
-        // እዚህ ጋር የጌሙ ሎጂክ ይቀጥላል...
+    async function placeBet() {
+        if(selected.length === 0 || balance < stake) return;
+        balance -= stake; tickets.push({ nums: [...selected], amt: stake, win: 0 });
+        updateUI(); await syncBalance(); clearSel(); renderTickets();
     }
-
-    // --- ያንተ የድሮ የጌም ሎጂክ (initGrid, tick, startDraw etc.) እዚህ ጋር ይቀጥላሉ ---
-    // ማሳሰቢያ፡ ጌሙ ሲያልቅና ተጫዋቹ ሲያሸንፍ updateDBBalance(balance) መጥራትህን እንዳትረሳ።
 
     function updateUI() { document.getElementById('u-balance').innerText = balance.toFixed(2) + " ETB"; }
+    function clearSel() { selected = []; document.querySelectorAll('.cell').forEach(c => c.classList.remove('selected')); }
     function openModal(id) { document.getElementById(id).classList.remove('hidden'); }
     function closeModal(id) { document.getElementById(id).classList.add('hidden'); }
     function adjStake(v) { stake = Math.max(5, stake + v); document.getElementById('stake-val').innerText = stake; }
-
     window.onload = checkSession;
 </script>
 </body>
